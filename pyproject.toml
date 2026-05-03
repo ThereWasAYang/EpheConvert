@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epheconvert"
+version = "0.1.0"
+description = "Coordinate, orbital element, and GNSS time conversions for ECEF, NTN-ECI, TEME, and J2000."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "astropy>=6",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
