@@ -13,7 +13,8 @@ EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前
 参考时刻之后，`NTN-ECI` 坐标轴保持惯性固定，不随地球自转。
 
 数值形式的 `time` 和 `epoch_time` 按 UTC Unix 秒解释。字符串形式的时间会
-交给 Astropy 解析，并按 UTC 处理。
+交给 Astropy 解析，并按 UTC 处理。工程中的时间统一使用毫秒精度；输入若包含
+更细的小数秒，会四舍五入到 0.001 s，UTC 字符串输出固定保留 3 位毫秒。
 
 ## 使用示例
 
@@ -31,7 +32,7 @@ state = convert_state(
     [0, 7500, 1000],
     from_frame="j2000",
     to_frame="ecef",
-    time="2026-05-03T00:00:00",
+    time="2026-05-03T00:00:00.123",
 )
 
 print(state.position_m)
@@ -48,8 +49,8 @@ state = convert_state(
     [0, 0, 0],
     from_frame="ecef",
     to_frame="ntn-eci",
-    time="2026-05-03T00:10:00",
-    epoch_time="2026-05-03T00:00:00",
+    time="2026-05-03T00:10:00.123",
+    epoch_time="2026-05-03T00:00:00.000",
 )
 ```
 
@@ -74,8 +75,8 @@ teme_elements = convert_elements(
     elements,
     from_frame="ntn-eci",
     to_frame="teme",
-    time="2026-05-03T00:00:00",
-    epoch_time="2026-05-03T00:00:00",
+    time="2026-05-03T00:00:00.123",
+    epoch_time="2026-05-03T00:00:00.000",
 )
 
 print(teme_elements)
@@ -101,13 +102,14 @@ restored_elements = state_to_elements(state.position_m, state.velocity_mps)
 
 ### UTC、GPS time 和北斗时间转换
 
-下面示例把 UTC 转换为 GPS time，再转换为 BDT。`UTC` 输出为 ISO 字符串；
-`GPS time` 和 `BDT` 输出为相对于各自系统历元的连续秒。
+下面示例把 UTC 转换为 GPS time，再转换为 BDT。`UTC` 输出为毫秒精度 ISO
+字符串；`GPS time` 和 `BDT` 输出为相对于各自系统历元的连续秒，精确到
+0.001 s。
 
 ```python
 from epheconvert import convert_time
 
-gps = convert_time("2026-05-03T00:00:00", from_system="utc", to_system="gps")
+gps = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps")
 bdt = convert_time(gps.value, from_system="gps", to_system="bdt")
 utc = convert_time(bdt.value, from_system="bdt", to_system="utc")
 

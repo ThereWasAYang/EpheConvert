@@ -77,9 +77,10 @@ def convert_state(
             ``"teme"``、``"j2000"`` 及少量别名。
         to_frame: 输出参考系，取值范围与 ``from_frame`` 相同。
         time: 状态矢量对应的时刻。数值按 UTC Unix 秒解释；字符串按 UTC
-            交给 Astropy 解析。
+            交给 Astropy 解析；内部会规整到毫秒精度。
         epoch_time: ``NTN-ECI`` 的参考时刻。只要输入或输出参考系包含
-            ``"ntn-eci"``，该参数就是必填项；数值约定与 ``time`` 相同。
+            ``"ntn-eci"``，该参数就是必填项；数值和毫秒精度约定与
+            ``time`` 相同。
 
     返回:
         ``StateVector``，其中 ``position_m`` 和 ``velocity_mps`` 分别是
@@ -260,17 +261,18 @@ def _to_time(value: Time | str | float) -> Time:
     """把外部时间输入转换为 Astropy ``Time``。
 
     参数:
-        value: Astropy ``Time``、UTC 时间字符串，或 UTC Unix 秒数值。
+        value: Astropy ``Time``、UTC 时间字符串，或 UTC Unix 秒数值；输入
+            会规整到毫秒精度。
 
     返回:
-        Astropy ``Time`` 对象。
+        毫秒精度的 Astropy ``Time`` 对象。
     """
 
     if isinstance(value, Time):
-        return value
+        return _with_millisecond_precision(value)
     if isinstance(value, (int, float)):
-        return Time(float(value), format="unix", scale="utc")
-    return Time(value, scale="utc")
+        return _with_millisecond_precision(Time(float(value), format="unix", scale="utc"))
+    return _with_millisecond_precision(Time(value, scale="utc"))
 
 
 def _to_epoch(epoch_time: Time | str | float | None, source: FrameName, target: FrameName) -> Time | None:
@@ -308,3 +310,19 @@ def _as_vector(value: np.ndarray, name: str) -> np.ndarray:
     if vector.shape != (3,):
         raise ValueError(f"{name} must be a 3-vector")
     return vector
+
+
+def _with_millisecond_precision(time: Time) -> Time:
+    """把 Astropy ``Time`` 规整到毫秒精度。
+
+    参数:
+        time: 待规整的 Astropy ``Time`` 对象。
+
+    返回:
+        新的 Astropy ``Time`` 对象，其 UTC Unix 秒被四舍五入到 0.001 s，
+        字符串显示精度固定为 3 位小数。
+    """
+
+    rounded = Time(round(float(time.utc.unix), 3), format="unix", scale="utc")
+    rounded.precision = 3
+    return rounded

@@ -5,8 +5,8 @@ from epheconvert import KeplerianElements, convert_elements, convert_state, conv
 from epheconvert.elements import elements_to_state, state_to_elements
 
 
-TIME = "2026-05-03T00:00:00"
-NTN_EPOCH = "2026-05-03T00:00:00"
+TIME = "2026-05-03T00:00:00.123"
+NTN_EPOCH = "2026-05-03T00:00:00.000"
 
 
 @pytest.mark.parametrize(
@@ -112,10 +112,18 @@ def test_convert_elements_between_inertial_frames_preserves_cartesian_state():
 
 
 def test_time_conversions():
-    utc = "2006-01-01T00:00:00"
+    utc = "2006-01-01T00:00:00.123"
     gps = convert_time(utc, from_system="utc", to_system="gps")
     bdt = convert_time(gps.value, from_system="gps", to_system="bdt")
     restored_utc = convert_time(bdt.value, from_system="bdt", to_system="utc")
 
-    assert bdt.value == pytest.approx(0.0)
-    assert restored_utc.value == "2006-01-01T00:00:00.000"
+    assert bdt.value == pytest.approx(0.123)
+    assert restored_utc.value == "2006-01-01T00:00:00.123"
+
+
+def test_time_inputs_are_rounded_to_milliseconds():
+    utc = convert_time("2006-01-01T00:00:00.1236", from_system="utc", to_system="utc")
+    gps = convert_time(0.1236, from_system="bdt", to_system="bdt")
+
+    assert utc.value == "2006-01-01T00:00:00.124"
+    assert gps.value == pytest.approx(0.124)
