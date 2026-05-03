@@ -14,9 +14,18 @@ _TOL = 1e-12
 
 @dataclass(frozen=True)
 class KeplerianElements:
-    """Classical Keplerian elements.
+    """经典开普勒六根数。
 
-    Angles are radians. ``a_m`` is the semi-major axis in metres.
+    参数:
+        a_m: 半长轴，单位为 m；当前实现面向椭圆轨道，应为正数。
+        eccentricity: 偏心率；当前实现要求 ``0 <= eccentricity < 1``。
+        inclination_rad: 轨道倾角，单位为 rad。
+        raan_rad: 升交点赤经 RAAN，单位为 rad。
+        argp_rad: 近地点幅角 argument of perigee，单位为 rad。
+        true_anomaly_rad: 真近点角，单位为 rad。
+
+    返回:
+        不直接返回值；该类实例表示一组开普勒六根数。
     """
 
     a_m: float
@@ -36,7 +45,22 @@ def convert_elements(
     epoch_time=None,
     mu_m3_s2: float = EARTH_MU_M3_S2,
 ) -> KeplerianElements:
-    """Convert Keplerian elements among NTN-ECI, TEME, and J2000."""
+    """在 ``NTN-ECI``、``TEME``、``J2000`` 之间转换开普勒六根数。
+
+    参数:
+        elements: 输入参考系下的开普勒六根数。
+        from_frame: 输入根数所在参考系，支持 ``"ntn-eci"``、``"teme"``、
+            ``"j2000"`` 及少量别名。
+        to_frame: 输出根数所在参考系，取值范围与 ``from_frame`` 相同。
+        time: 根数对应的时刻；传递给状态矢量转换函数。
+        epoch_time: ``NTN-ECI`` 的参考时刻。只要转换涉及 ``NTN-ECI``，
+            该参数就是必填项。
+        mu_m3_s2: 中心天体标准引力参数，单位为 m^3/s^2；默认使用地球
+            ``GM``。
+
+    返回:
+        目标参考系下的 ``KeplerianElements``。
+    """
 
     _require_inertial_elements_frame(from_frame)
     _require_inertial_elements_frame(to_frame)
@@ -53,7 +77,16 @@ def convert_elements(
 
 
 def elements_to_state(elements: KeplerianElements, *, mu_m3_s2: float = EARTH_MU_M3_S2) -> StateVector:
-    """Convert classical Keplerian elements to an inertial Cartesian state."""
+    """把经典开普勒六根数转换为惯性系笛卡尔状态矢量。
+
+    参数:
+        elements: 输入开普勒六根数，角度单位为 rad。
+        mu_m3_s2: 中心天体标准引力参数，单位为 m^3/s^2；默认使用地球
+            ``GM``。
+
+    返回:
+        ``StateVector``，表示与输入根数等价的位置和速度。
+    """
 
     a = float(elements.a_m)
     e = float(elements.eccentricity)
@@ -82,7 +115,17 @@ def state_to_elements(
     *,
     mu_m3_s2: float = EARTH_MU_M3_S2,
 ) -> KeplerianElements:
-    """Convert an inertial Cartesian state to classical Keplerian elements."""
+    """把惯性系笛卡尔状态矢量转换为经典开普勒六根数。
+
+    参数:
+        position_m: 三维位置坐标，单位为 m。
+        velocity_mps: 三维速度矢量，单位为 m/s。
+        mu_m3_s2: 中心天体标准引力参数，单位为 m^3/s^2；默认使用地球
+            ``GM``。
+
+    返回:
+        ``KeplerianElements``，角度单位为 rad，半长轴单位为 m。
+    """
 
     r_vec = np.asarray(position_m, dtype=float)
     v_vec = np.asarray(velocity_mps, dtype=float)
@@ -128,22 +171,58 @@ def state_to_elements(
 
 
 def _rotation_x(angle: float) -> np.ndarray:
+    """生成绕 x 轴旋转的方向余弦矩阵。
+
+    参数:
+        angle: 旋转角，单位为 rad。
+
+    返回:
+        形状为 ``(3, 3)`` 的旋转矩阵。
+    """
+
     c = np.cos(angle)
     s = np.sin(angle)
     return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
 
 
 def _rotation_z(angle: float) -> np.ndarray:
+    """生成绕 z 轴旋转的方向余弦矩阵。
+
+    参数:
+        angle: 旋转角，单位为 rad。
+
+    返回:
+        形状为 ``(3, 3)`` 的旋转矩阵。
+    """
+
     c = np.cos(angle)
     s = np.sin(angle)
     return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
 
 
 def _angle_0_2pi(angle: float) -> float:
+    """把角度归一化到 ``[0, 2*pi)``。
+
+    参数:
+        angle: 输入角度，单位为 rad。
+
+    返回:
+        归一化后的角度，单位为 rad。
+    """
+
     return float(angle % (2 * np.pi))
 
 
 def _require_inertial_elements_frame(frame: str) -> None:
+    """检查开普勒根数转换是否使用受支持的惯性参考系。
+
+    参数:
+        frame: 用户传入的参考系名称或别名。
+
+    返回:
+        None。若参考系不受支持，则抛出 ``ValueError``。
+    """
+
     key = frame.strip().lower().replace("_", "-")
     if key not in {"ntn-eci", "ntneci", "teme", "j2000", "gcrs", "eme2000"}:
         raise ValueError("Keplerian elements are supported only for NTN-ECI, TEME, and J2000")

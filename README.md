@@ -17,8 +17,14 @@ EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前
 
 ## 使用示例
 
+### 位置坐标和速度矢量转换
+
+下面示例把 `J2000` 下的位置、速度转换到 `ECEF`。返回值是
+`StateVector`，其中 `position_m` 是目标参考系下的位置坐标，单位为 m；
+`velocity_mps` 是目标参考系下的速度矢量，单位为 m/s。
+
 ```python
-from epheconvert import KeplerianElements, convert_elements, convert_state, convert_time
+from epheconvert import convert_state
 
 state = convert_state(
     [7000e3, 0, 0],
@@ -27,6 +33,33 @@ state = convert_state(
     to_frame="ecef",
     time="2026-05-03T00:00:00",
 )
+
+print(state.position_m)
+print(state.velocity_mps)
+```
+
+如果转换涉及 `NTN-ECI`，需要同时给出 `epoch_time`：
+
+```python
+from epheconvert import convert_state
+
+state = convert_state(
+    [6378137.0, 0, 0],
+    [0, 0, 0],
+    from_frame="ecef",
+    to_frame="ntn-eci",
+    time="2026-05-03T00:10:00",
+    epoch_time="2026-05-03T00:00:00",
+)
+```
+
+### 开普勒六根数转换
+
+下面示例把 `NTN-ECI` 下的开普勒六根数转换到 `TEME`。角度单位均为 rad，
+半长轴单位为 m。返回值是目标参考系下的 `KeplerianElements`。
+
+```python
+from epheconvert import KeplerianElements, convert_elements
 
 elements = KeplerianElements(
     a_m=7000e3,
@@ -45,7 +78,42 @@ teme_elements = convert_elements(
     epoch_time="2026-05-03T00:00:00",
 )
 
+print(teme_elements)
+```
+
+也可以在开普勒六根数和惯性系笛卡尔状态矢量之间互转：
+
+```python
+from epheconvert import KeplerianElements, elements_to_state, state_to_elements
+
+elements = KeplerianElements(
+    a_m=7200e3,
+    eccentricity=0.01,
+    inclination_rad=0.7,
+    raan_rad=1.2,
+    argp_rad=0.4,
+    true_anomaly_rad=2.0,
+)
+
+state = elements_to_state(elements)
+restored_elements = state_to_elements(state.position_m, state.velocity_mps)
+```
+
+### UTC、GPS time 和北斗时间转换
+
+下面示例把 UTC 转换为 GPS time，再转换为 BDT。`UTC` 输出为 ISO 字符串；
+`GPS time` 和 `BDT` 输出为相对于各自系统历元的连续秒。
+
+```python
+from epheconvert import convert_time
+
 gps = convert_time("2026-05-03T00:00:00", from_system="utc", to_system="gps")
+bdt = convert_time(gps.value, from_system="gps", to_system="bdt")
+utc = convert_time(bdt.value, from_system="bdt", to_system="utc")
+
+print(gps.value)
+print(bdt.value)
+print(utc.value)
 ```
 
 ## 开发与测试
