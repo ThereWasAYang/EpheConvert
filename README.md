@@ -1,21 +1,21 @@
 # EpheConvert
 
-EpheConvert provides Python helpers for:
+EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前提供以下能力：
 
-- Cartesian position and velocity conversion among ECEF, NTN-ECI, TEME, and J2000.
-- Keplerian six-element conversion among NTN-ECI, TEME, and J2000.
-- UTC, GPS time, and BeiDou time conversion.
+- 在 `ECEF`、`NTN-ECI`、`TEME`、`J2000` 之间转换笛卡尔位置坐标和速度矢量。
+- 在 `NTN-ECI`、`TEME`、`J2000` 之间转换开普勒六根数。
+- 在 `UTC`、`GPS time`、`BDT`（北斗时间）之间转换时间。
 
-## NTN-ECI Definition
+## NTN-ECI 定义
 
-In this project, `NTN-ECI` is an Earth-centred inertial frame. At its reference
-instant `epoch_time`, its axes coincide with ECEF. After that instant, the
-`NTN-ECI` axes remain inertially fixed instead of rotating with Earth.
+在本工程中，`NTN-ECI` 被定义为一种地心惯性参考系。它的参考时刻由
+`epoch_time` 指定；在该参考时刻，`NTN-ECI` 的坐标轴与 `ECEF` 重合。
+参考时刻之后，`NTN-ECI` 坐标轴保持惯性固定，不随地球自转。
 
-Numeric `time` and `epoch_time` inputs are UTC Unix seconds. String time inputs
-are parsed by Astropy as UTC.
+数值形式的 `time` 和 `epoch_time` 按 UTC Unix 秒解释。字符串形式的时间会
+交给 Astropy 解析，并按 UTC 处理。
 
-## Example
+## 使用示例
 
 ```python
 from epheconvert import KeplerianElements, convert_elements, convert_state, convert_time
@@ -48,10 +48,15 @@ teme_elements = convert_elements(
 gps = convert_time("2026-05-03T00:00:00", from_system="utc", to_system="gps")
 ```
 
-## Development
+## 开发与测试
 
-Use the conda environment named `py312`.
+本工程使用 conda 环境 `py312`。
 
 ```bash
 conda run -n py312 env PYTHONPATH=src python -m pytest
 ```
+
+## 文档约定
+
+README 以及后续新增的项目文档尽量使用中文撰写；必要的专业术语、协议字段、
+坐标系名称、API 名称和常见缩写可以保留英文。
