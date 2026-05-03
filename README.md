@@ -20,6 +20,7 @@ EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前
 
 ### 位置坐标和速度矢量转换
 
+`ECEF`、`NTN-ECI`、`TEME`、`J2000` 四种参考系之间支持任意两两转换。
 下面示例把 `J2000` 下的位置、速度转换到 `ECEF`。返回值是
 `StateVector`，其中 `position_m` 是目标参考系下的位置坐标，单位为 m；
 `velocity_mps` 是目标参考系下的速度矢量，单位为 m/s。
@@ -54,10 +55,37 @@ state = convert_state(
 )
 ```
 
+四种参考系之间的其他有向转换只需要修改 `from_frame` 和 `to_frame`。例如：
+
+```python
+from epheconvert import convert_state
+
+position_m = [7000e3, 0, 0]
+velocity_mps = [0, 7500, 1000]
+time = "2026-05-03T00:00:00.123"
+epoch_time = "2026-05-03T00:00:00.000"
+
+ecef_to_ntn = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
+ecef_to_teme = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="teme", time=time)
+ecef_to_j2000 = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="j2000", time=time)
+
+ntn_to_ecef = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="ecef", time=time, epoch_time=epoch_time)
+ntn_to_teme = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="teme", time=time, epoch_time=epoch_time)
+ntn_to_j2000 = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="j2000", time=time, epoch_time=epoch_time)
+
+teme_to_ecef = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ecef", time=time)
+teme_to_ntn = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
+teme_to_j2000 = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="j2000", time=time)
+
+j2000_to_ecef = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ecef", time=time)
+j2000_to_ntn = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
+j2000_to_teme = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="teme", time=time)
+```
+
 ### 开普勒六根数转换
 
-下面示例把 `NTN-ECI` 下的开普勒六根数转换到 `TEME`。角度单位均为 rad，
-半长轴单位为 m。返回值是目标参考系下的 `KeplerianElements`。
+`NTN-ECI`、`TEME`、`J2000` 三种惯性参考系之间支持任意两两转换。角度单位
+均为 rad，半长轴单位为 m。返回值是目标参考系下的 `KeplerianElements`。
 
 ```python
 from epheconvert import KeplerianElements, convert_elements
@@ -82,6 +110,33 @@ teme_elements = convert_elements(
 print(teme_elements)
 ```
 
+三种参考系之间的全部有向转换示例如下：
+
+```python
+from epheconvert import KeplerianElements, convert_elements
+
+elements = KeplerianElements(
+    a_m=7000e3,
+    eccentricity=0.001,
+    inclination_rad=0.9,
+    raan_rad=0.4,
+    argp_rad=0.2,
+    true_anomaly_rad=1.0,
+)
+
+time = "2026-05-03T00:00:00.123"
+epoch_time = "2026-05-03T00:00:00.000"
+
+ntn_to_teme = convert_elements(elements, from_frame="ntn-eci", to_frame="teme", time=time, epoch_time=epoch_time)
+ntn_to_j2000 = convert_elements(elements, from_frame="ntn-eci", to_frame="j2000", time=time, epoch_time=epoch_time)
+
+teme_to_ntn = convert_elements(elements, from_frame="teme", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
+teme_to_j2000 = convert_elements(elements, from_frame="teme", to_frame="j2000", time=time)
+
+j2000_to_ntn = convert_elements(elements, from_frame="j2000", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
+j2000_to_teme = convert_elements(elements, from_frame="j2000", to_frame="teme", time=time)
+```
+
 也可以在开普勒六根数和惯性系笛卡尔状态矢量之间互转：
 
 ```python
@@ -102,20 +157,21 @@ restored_elements = state_to_elements(state.position_m, state.velocity_mps)
 
 ### UTC、GPS time 和北斗时间转换
 
-下面示例把 UTC 转换为 GPS time，再转换为 BDT。`UTC` 输出为毫秒精度 ISO
-字符串；`GPS time` 和 `BDT` 输出为相对于各自系统历元的连续秒，精确到
-0.001 s。
+`UTC`、`GPS time`、`BDT` 三种时间系统之间支持任意两两转换。`UTC` 输出为
+毫秒精度 ISO 字符串；`GPS time` 和 `BDT` 输出为相对于各自系统历元的连续秒，
+精确到 0.001 s。
 
 ```python
 from epheconvert import convert_time
 
-gps = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps")
-bdt = convert_time(gps.value, from_system="gps", to_system="bdt")
-utc = convert_time(bdt.value, from_system="bdt", to_system="utc")
+utc_to_gps = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps")
+utc_to_bdt = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt")
 
-print(gps.value)
-print(bdt.value)
-print(utc.value)
+gps_to_utc = convert_time(utc_to_gps.value, from_system="gps", to_system="utc")
+gps_to_bdt = convert_time(utc_to_gps.value, from_system="gps", to_system="bdt")
+
+bdt_to_utc = convert_time(utc_to_bdt.value, from_system="bdt", to_system="utc")
+bdt_to_gps = convert_time(utc_to_bdt.value, from_system="bdt", to_system="gps")
 ```
 
 ## 开发与测试
