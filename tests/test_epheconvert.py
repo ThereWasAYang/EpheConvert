@@ -21,8 +21,8 @@ NTN_EPOCH = "2026-05-03T00:00:00"
     ],
 )
 def test_state_round_trip(source, target):
-    position = np.array([7_000_000.0, -1_200_000.0, 1_300_000.0])
-    velocity = np.array([950.0, 7_200.0, -1_100.0])
+    position = np.array([7000000.0, -1200000.0, 1300000.0])
+    velocity = np.array([950.0, 7200.0, -1100.0])
 
     converted = convert_state(
         position,
@@ -46,7 +46,7 @@ def test_state_round_trip(source, target):
 
 
 def test_ntn_eci_matches_ecef_at_epoch_for_position_orientation():
-    position = np.array([6_378_137.0, 10.0, -20.0])
+    position = np.array([6378137.0, 10.0, -20.0])
     velocity = np.zeros(3)
 
     converted = convert_state(
@@ -63,7 +63,7 @@ def test_ntn_eci_matches_ecef_at_epoch_for_position_orientation():
 
 def test_elements_round_trip_state():
     elements = KeplerianElements(
-        a_m=7_200_000.0,
+        a_m=7200000.0,
         eccentricity=0.01,
         inclination_rad=0.7,
         raan_rad=1.2,
@@ -81,7 +81,7 @@ def test_elements_round_trip_state():
 
 def test_convert_elements_between_inertial_frames_preserves_cartesian_state():
     elements = KeplerianElements(
-        a_m=7_200_000.0,
+        a_m=7200000.0,
         eccentricity=0.02,
         inclination_rad=0.8,
         raan_rad=0.6,
