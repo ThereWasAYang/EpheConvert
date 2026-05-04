@@ -18,6 +18,13 @@ EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前
 
 ## 使用示例
 
+README 中的示例已经整理到 [examples/readme_examples.py](examples/readme_examples.py)。
+可以一次运行全部示例，也可以导入该文件中的单个函数逐项验证。
+
+```bash
+conda run -n py312 env PYTHONPATH=src python examples/readme_examples.py
+```
+
 ### 位置坐标和速度矢量转换
 
 `ECEF`、`NTN-ECI`、`TEME`、`J2000` 四种参考系之间支持任意两两转换。
