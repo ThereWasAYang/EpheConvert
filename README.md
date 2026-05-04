@@ -289,6 +289,30 @@ bdt_to_utc = convert_time(utc_to_bdt.value, from_system="bdt", to_system="utc")
 bdt_to_gps = convert_time(utc_to_bdt.value, from_system="bdt", to_system="gps")
 ```
 
+如果需要把 GPS/BDT 的连续秒或连续毫秒显示为对应时间系统自己的 ISO 字符串，
+可以使用下面四个函数。注意这些结果是 GPS/BDT 时间系统下的 ISO 字符串，不是
+UTC ISO 字符串。
+
+```python
+from epheconvert import (
+    bdt_milliseconds_to_iso,
+    bdt_seconds_to_iso,
+    gps_milliseconds_to_iso,
+    gps_seconds_to_iso,
+)
+
+gps_iso_from_seconds = gps_seconds_to_iso(1461801618.123)
+gps_iso_from_milliseconds = gps_milliseconds_to_iso(1461801618123)
+
+bdt_iso_from_seconds = bdt_seconds_to_iso(641692804.123)
+bdt_iso_from_milliseconds = bdt_milliseconds_to_iso(641692804123)
+
+print(gps_iso_from_seconds)
+print(gps_iso_from_milliseconds)
+print(bdt_iso_from_seconds)
+print(bdt_iso_from_milliseconds)
+```
+
 如果只需要对一个 UTC 时间加减指定秒数，可以使用 `add_utc_seconds()`。秒数
 可以是正数、负数或小数，返回值仍是毫秒精度 UTC ISO 字符串。
 

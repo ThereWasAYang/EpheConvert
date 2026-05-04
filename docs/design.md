@@ -305,6 +305,15 @@ add_utc_seconds(utc_time, seconds)
 add_time_seconds(value, seconds, system="gps")
 ```
 
+如果需要把 GPS/BDT 连续时间显示成对应时间系统自己的 ISO 字符串，可以使用：
+
+```python
+gps_seconds_to_iso(gps_seconds)
+gps_milliseconds_to_iso(gps_milliseconds)
+bdt_seconds_to_iso(bdt_seconds)
+bdt_milliseconds_to_iso(bdt_milliseconds)
+```
+
 返回值是 `TimeConversion`：
 
 - `system`：输出时间系统。
@@ -313,6 +322,7 @@ add_time_seconds(value, seconds, system="gps")
 
 `add_utc_seconds()` 的返回值是毫秒精度 UTC ISO 字符串。
 `add_time_seconds()` 返回 `TimeConversion`，输出系统与输入 `system` 保持一致。
+四个连续时间转 ISO 函数返回对应时间系统下的毫秒精度 ISO 字符串，不转换为 UTC。
 
 ### 设计思路
 
@@ -333,6 +343,18 @@ add_time_seconds(value, seconds, system="gps")
 
 这样可以让 UTC、GPS time、BDT 的加减秒与系统时间转换共享同一套毫秒精度和闰秒处理规则。
 
+GPS/BDT 连续秒或连续毫秒转 ISO 字符串不经过 Astropy 的 UTC 表示，而是按各自
+系统历元直接展开：
+
+```text
+GPS ISO = 1980-01-06T00:00:00.000 + GPS 连续时间
+BDT ISO = 2006-01-01T00:00:00.000 + BDT 连续时间
+```
+
+这种设计用于显示“GPS 时间系统下的日历时间”或“BDT 时间系统下的日历时间”。
+它与 `convert_time(..., to_system="utc")` 不同，后者会输出同一物理时刻对应的
+UTC 字符串，并包含 UTC/GPS 闰秒关系。
+
 ### UTC
 
 UTC 输入可以是：
@@ -351,7 +373,7 @@ GPS time 使用 Astropy 的 `format="gps"`。它表示从 GPS 历元开始的连
 1980-01-06T00:00:00.000
 ```
 
-输入 GPS time 时，数值按 GPS 连续秒解释。输出 GPS time 时返回 GPS 连续秒，并保留到 0.001 s。
+输入 GPS time 时，数值按 GPS 连续秒解释。输出 GPS time 时返回 GPS 连续秒，并保留到 0.001 s。若需要显示为 GPS 时间系统自己的 ISO 字符串，可使用 `gps_seconds_to_iso()` 或 `gps_milliseconds_to_iso()`。
 
 ### BDT
 
@@ -373,6 +395,9 @@ Time(BDT_EPOCH_UTC, scale="utc").gps
 - `Astropy Time -> BDT`：用当前时刻的 GPS 秒减去 BDT 历元对应的 GPS 秒。
 
 这种实现利用 Astropy 处理 UTC 与 GPS 之间的闰秒关系，避免手写闰秒表。
+
+若需要显示为 BDT 时间系统自己的 ISO 字符串，可使用 `bdt_seconds_to_iso()` 或
+`bdt_milliseconds_to_iso()`。这类显示转换按 BDT 历元直接展开，不转换为 UTC。
 
 ## 依赖选择
 

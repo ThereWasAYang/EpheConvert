@@ -1,7 +1,18 @@
 import numpy as np
 import pytest
 
-from epheconvert import KeplerianElements, add_time_seconds, add_utc_seconds, convert_elements, convert_state, convert_time
+from epheconvert import (
+    KeplerianElements,
+    add_time_seconds,
+    add_utc_seconds,
+    bdt_milliseconds_to_iso,
+    bdt_seconds_to_iso,
+    convert_elements,
+    convert_state,
+    convert_time,
+    gps_milliseconds_to_iso,
+    gps_seconds_to_iso,
+)
 from epheconvert.elements import elements_to_state, state_to_elements
 
 
@@ -252,3 +263,17 @@ def test_add_time_seconds_supports_bdt_time():
 
     assert shifted.system == "bdt"
     assert shifted.value == pytest.approx(BDT_TIME - 0.124)
+
+
+def test_gps_seconds_and_milliseconds_to_iso():
+    assert gps_seconds_to_iso(0) == "1980-01-06T00:00:00.000"
+    assert gps_seconds_to_iso(1.234) == "1980-01-06T00:00:01.234"
+    assert gps_milliseconds_to_iso(1234) == "1980-01-06T00:00:01.234"
+    assert gps_milliseconds_to_iso(1234.6) == "1980-01-06T00:00:01.235"
+
+
+def test_bdt_seconds_and_milliseconds_to_iso():
+    assert bdt_seconds_to_iso(0) == "2006-01-01T00:00:00.000"
+    assert bdt_seconds_to_iso(1.234) == "2006-01-01T00:00:01.234"
+    assert bdt_milliseconds_to_iso(1234) == "2006-01-01T00:00:01.234"
+    assert bdt_milliseconds_to_iso(1234.6) == "2006-01-01T00:00:01.235"

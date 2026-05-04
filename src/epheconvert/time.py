@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Literal
 
 from astropy.time import Time, TimeDelta
@@ -10,6 +11,8 @@ from astropy.time import Time, TimeDelta
 TimeSystem = Literal["utc", "gps", "bdt"]
 GPS_EPOCH_UTC = "1980-01-06T00:00:00.000"
 BDT_EPOCH_UTC = "2006-01-01T00:00:00.000"
+_GPS_EPOCH_DATETIME = datetime.fromisoformat(GPS_EPOCH_UTC)
+_BDT_EPOCH_DATETIME = datetime.fromisoformat(BDT_EPOCH_UTC)
 
 
 @dataclass(frozen=True)
@@ -93,6 +96,66 @@ def add_time_seconds(value: Time | str | float, seconds: float, *, system: TimeS
     base_time = _to_astropy_time(value, normalized)
     shifted = base_time + TimeDelta(_round_milliseconds(seconds), format="sec")
     return TimeConversion(normalized, _from_astropy_time(shifted, normalized), _with_millisecond_precision(shifted))
+
+
+def gps_seconds_to_iso(gps_seconds: float) -> str:
+    """把 GPS 连续秒转换为 GPS 时间的 ISO 字符串。
+
+    参数:
+        gps_seconds: 从 GPS 历元 ``1980-01-06T00:00:00.000`` 起算的连续秒，
+            可以是小数。
+
+    返回:
+        GPS 时间系统下的毫秒精度 ISO 字符串。该字符串按 GPS 连续时间展开，
+        不转换为 UTC。
+    """
+
+    return _continuous_seconds_to_iso(gps_seconds, _GPS_EPOCH_DATETIME)
+
+
+def gps_milliseconds_to_iso(gps_milliseconds: float) -> str:
+    """把 GPS 连续毫秒转换为 GPS 时间的 ISO 字符串。
+
+    参数:
+        gps_milliseconds: 从 GPS 历元 ``1980-01-06T00:00:00.000`` 起算的
+            连续毫秒，可以是小数。
+
+    返回:
+        GPS 时间系统下的毫秒精度 ISO 字符串。该字符串按 GPS 连续时间展开，
+        不转换为 UTC。
+    """
+
+    return _continuous_milliseconds_to_iso(gps_milliseconds, _GPS_EPOCH_DATETIME)
+
+
+def bdt_seconds_to_iso(bdt_seconds: float) -> str:
+    """把 BDT 连续秒转换为 BDT 时间的 ISO 字符串。
+
+    参数:
+        bdt_seconds: 从北斗时间历元 ``2006-01-01T00:00:00.000`` 起算的连续
+            秒，可以是小数。
+
+    返回:
+        BDT 时间系统下的毫秒精度 ISO 字符串。该字符串按北斗连续时间展开，
+        不转换为 UTC。
+    """
+
+    return _continuous_seconds_to_iso(bdt_seconds, _BDT_EPOCH_DATETIME)
+
+
+def bdt_milliseconds_to_iso(bdt_milliseconds: float) -> str:
+    """把 BDT 连续毫秒转换为 BDT 时间的 ISO 字符串。
+
+    参数:
+        bdt_milliseconds: 从北斗时间历元 ``2006-01-01T00:00:00.000`` 起算的
+            连续毫秒，可以是小数。
+
+    返回:
+        BDT 时间系统下的毫秒精度 ISO 字符串。该字符串按北斗连续时间展开，
+        不转换为 UTC。
+    """
+
+    return _continuous_milliseconds_to_iso(bdt_milliseconds, _BDT_EPOCH_DATETIME)
 
 
 def _to_astropy_time(value: Time | str | float, system: str) -> Time:
@@ -182,6 +245,36 @@ def _round_milliseconds(value: float) -> float:
     """
 
     return round(float(value), 3)
+
+
+def _continuous_seconds_to_iso(seconds: float, epoch: datetime) -> str:
+    """把相对历元的连续秒转换为 ISO 字符串。
+
+    参数:
+        seconds: 相对历元的连续秒，可以是小数。
+        epoch: 时间系统历元的 ``datetime``。
+
+    返回:
+        毫秒精度 ISO 字符串。
+    """
+
+    return _continuous_milliseconds_to_iso(float(seconds) * 1000, epoch)
+
+
+def _continuous_milliseconds_to_iso(milliseconds: float, epoch: datetime) -> str:
+    """把相对历元的连续毫秒转换为 ISO 字符串。
+
+    参数:
+        milliseconds: 相对历元的连续毫秒，可以是小数。
+        epoch: 时间系统历元的 ``datetime``。
+
+    返回:
+        毫秒精度 ISO 字符串。
+    """
+
+    total_milliseconds = round(float(milliseconds))
+    converted = epoch + timedelta(milliseconds=total_milliseconds)
+    return converted.isoformat(timespec="milliseconds")
 
 
 def _normalize_system(system: str) -> TimeSystem:

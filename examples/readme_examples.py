@@ -12,10 +12,14 @@ from epheconvert import (
     KeplerianElements,
     add_time_seconds,
     add_utc_seconds,
+    bdt_milliseconds_to_iso,
+    bdt_seconds_to_iso,
     convert_elements,
     convert_state,
     convert_time,
     elements_to_state,
+    gps_milliseconds_to_iso,
+    gps_seconds_to_iso,
     state_to_elements,
 )
 
@@ -371,6 +375,24 @@ def example_add_utc_seconds():
     }
 
 
+def example_gps_bdt_iso_strings():
+    """示例：GPS/BDT 连续秒或连续毫秒转换为本系统 ISO 字符串。
+
+    参数:
+        无。
+
+    返回:
+        ``dict``。键表示输入类型，值为对应时间系统下的毫秒精度 ISO 字符串。
+    """
+
+    return {
+        "gps_seconds_to_iso": gps_seconds_to_iso(GPS_TIME),
+        "gps_milliseconds_to_iso": gps_milliseconds_to_iso(GPS_TIME * 1000),
+        "bdt_seconds_to_iso": bdt_seconds_to_iso(BDT_TIME),
+        "bdt_milliseconds_to_iso": bdt_milliseconds_to_iso(BDT_TIME * 1000),
+    }
+
+
 def main():
     """顺序运行 README 中的全部示例。
 
@@ -409,6 +431,10 @@ def main():
     print("\nUTC 时间加减秒")
     for name, utc_time in example_add_utc_seconds().items():
         print(f"{name} = {utc_time}")
+
+    print("\nGPS/BDT 连续时间转 ISO 字符串")
+    for name, iso_time in example_gps_bdt_iso_strings().items():
+        print(f"{name} = {iso_time}")
 
 
 if __name__ == "__main__":
