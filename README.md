@@ -25,6 +25,8 @@ README 中的示例已经整理到 [examples/readme_examples.py](examples/readme
 conda run -n py312 env PYTHONPATH=src python examples/readme_examples.py
 ```
 
+更详细的功能设计和实现说明见 [docs/design.md](docs/design.md)。
+
 ### 位置坐标和速度矢量转换
 
 `ECEF`、`NTN-ECI`、`TEME`、`J2000` 四种参考系之间支持任意两两转换。
