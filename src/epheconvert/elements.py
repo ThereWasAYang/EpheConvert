@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .coordinates import FrameName, StateVector, convert_state
+from .time import TimeSystem
 
 EARTH_MU_M3_S2 = 3.986004418e14
 _TOL = 1e-12
@@ -43,6 +44,8 @@ def convert_elements(
     to_frame: FrameName,
     time,
     epoch_time=None,
+    time_system: TimeSystem = "utc",
+    epoch_time_system: TimeSystem | None = None,
     mu_m3_s2: float = EARTH_MU_M3_S2,
 ) -> KeplerianElements:
     """在 ``NTN-ECI``、``TEME``、``J2000`` 之间转换开普勒六根数。
@@ -52,9 +55,14 @@ def convert_elements(
         from_frame: 输入根数所在参考系，支持 ``"ntn-eci"``、``"teme"``、
             ``"j2000"`` 及少量别名。
         to_frame: 输出根数所在参考系，取值范围与 ``from_frame`` 相同。
-        time: 根数对应的时刻；传递给状态矢量转换函数。
+        time: 根数对应的时刻；传递给状态矢量转换函数。默认按 UTC 解释；
+            当 ``time_system="gps"`` 时，数值按 GPS 连续秒解释。
         epoch_time: ``NTN-ECI`` 的参考时刻。只要转换涉及 ``NTN-ECI``，
             该参数就是必填项。
+        time_system: ``time`` 所属时间系统，支持 ``"utc"``、``"gps"``、
+            ``"bdt"`` 及少量别名。
+        epoch_time_system: ``epoch_time`` 所属时间系统；不传时默认使用
+            ``time_system``。
         mu_m3_s2: 中心天体标准引力参数，单位为 m^3/s^2；默认使用地球
             ``GM``。
 
@@ -72,6 +80,8 @@ def convert_elements(
         to_frame=to_frame,
         time=time,
         epoch_time=epoch_time,
+        time_system=time_system,
+        epoch_time_system=epoch_time_system,
     )
     return state_to_elements(converted.position_m, converted.velocity_mps, mu_m3_s2=mu_m3_s2)
 

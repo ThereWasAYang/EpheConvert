@@ -24,6 +24,8 @@ from astropy.coordinates import (
 from astropy.time import Time
 from astropy.utils import iers
 
+from .time import TimeSystem, _to_astropy_time
+
 iers.conf.auto_download = False
 
 FrameName = Literal["ecef", "ntn-eci", "teme", "j2000"]
@@ -67,6 +69,8 @@ def convert_state(
     to_frame: FrameName,
     time: Time | str | float,
     epoch_time: Time | str | float | None = None,
+    time_system: TimeSystem = "utc",
+    epoch_time_system: TimeSystem | None = None,
 ) -> StateVector:
     """在支持的参考系之间转换笛卡尔状态矢量。
 
@@ -76,11 +80,16 @@ def convert_state(
         from_frame: 输入参考系，支持 ``"ecef"``、``"ntn-eci"``、
             ``"teme"``、``"j2000"`` 及少量别名。
         to_frame: 输出参考系，取值范围与 ``from_frame`` 相同。
-        time: 状态矢量对应的时刻。数值按 UTC Unix 秒解释；字符串按 UTC
-            交给 Astropy 解析；内部会规整到毫秒精度。
+        time: 状态矢量对应的时刻。默认按 UTC 解释；当
+            ``time_system="gps"`` 时，数值按 GPS 连续秒解释。输入内部会
+            规整到毫秒精度。
         epoch_time: ``NTN-ECI`` 的参考时刻。只要输入或输出参考系包含
             ``"ntn-eci"``，该参数就是必填项；数值和毫秒精度约定与
             ``time`` 相同。
+        time_system: ``time`` 所属时间系统，支持 ``"utc"``、``"gps"``、
+            ``"bdt"`` 及少量别名。
+        epoch_time_system: ``epoch_time`` 所属时间系统；不传时默认使用
+            ``time_system``。
 
     返回:
         ``StateVector``，其中 ``position_m`` 和 ``velocity_mps`` 分别是
@@ -88,15 +97,17 @@ def convert_state(
     """
 
     state = StateVector(np.asarray(position_m, dtype=float), np.asarray(velocity_mps, dtype=float))
-    obstime = _to_time(time)
+    obstime = _to_time(time, time_system)
     source = _normalize_frame(from_frame)
     target = _normalize_frame(to_frame)
+    epoch_system = epoch_time_system or time_system
 
     if source == target:
         return state
 
-    gcrs_state = _to_gcrs(state, source, obstime, _to_epoch(epoch_time, source, target))
-    return _from_gcrs(gcrs_state, target, obstime, _to_epoch(epoch_time, source, target))
+    epoch = _to_epoch(epoch_time, source, target, epoch_system)
+    gcrs_state = _to_gcrs(state, source, obstime, epoch)
+    return _from_gcrs(gcrs_state, target, obstime, epoch)
 
 
 def _to_gcrs(state: StateVector, frame: FrameName, obstime: Time, epoch_time: Time | None) -> StateVector:
@@ -257,31 +268,36 @@ def _normalize_frame(frame: str) -> FrameName:
     return aliases[key]  # type: ignore[return-value]
 
 
-def _to_time(value: Time | str | float) -> Time:
+def _to_time(value: Time | str | float, system: TimeSystem = "utc") -> Time:
     """把外部时间输入转换为 Astropy ``Time``。
 
     参数:
-        value: Astropy ``Time``、UTC 时间字符串，或 UTC Unix 秒数值；输入
-            会规整到毫秒精度。
+        value: Astropy ``Time``、时间字符串，或连续秒数值；输入会规整到
+            毫秒精度。
+        system: 输入值所属时间系统。``"utc"`` 数值按 UTC Unix 秒解释；
+            ``"gps"`` 数值按 GPS 连续秒解释；``"bdt"`` 数值按北斗连续秒
+            解释。
 
     返回:
         毫秒精度的 Astropy ``Time`` 对象。
     """
 
-    if isinstance(value, Time):
-        return _with_millisecond_precision(value)
-    if isinstance(value, (int, float)):
-        return _with_millisecond_precision(Time(float(value), format="unix", scale="utc"))
-    return _with_millisecond_precision(Time(value, scale="utc"))
+    return _to_astropy_time(value, system)
 
 
-def _to_epoch(epoch_time: Time | str | float | None, source: FrameName, target: FrameName) -> Time | None:
+def _to_epoch(
+    epoch_time: Time | str | float | None,
+    source: FrameName,
+    target: FrameName,
+    epoch_time_system: TimeSystem = "utc",
+) -> Time | None:
     """解析 ``NTN-ECI`` 转换所需的参考时刻。
 
     参数:
         epoch_time: 用户传入的 ``NTN-ECI`` 参考时刻。
         source: 输入参考系名称。
         target: 输出参考系名称。
+        epoch_time_system: ``epoch_time`` 所属时间系统。
 
     返回:
         当转换涉及 ``NTN-ECI`` 时返回 Astropy ``Time``；否则返回
@@ -292,7 +308,7 @@ def _to_epoch(epoch_time: Time | str | float | None, source: FrameName, target: 
         return None
     if epoch_time is None:
         raise ValueError("epoch_time is required for NTN-ECI conversions")
-    return _to_time(epoch_time)
+    return _to_time(epoch_time, epoch_time_system)
 
 
 def _as_vector(value: np.ndarray, name: str) -> np.ndarray:
@@ -310,19 +326,3 @@ def _as_vector(value: np.ndarray, name: str) -> np.ndarray:
     if vector.shape != (3,):
         raise ValueError(f"{name} must be a 3-vector")
     return vector
-
-
-def _with_millisecond_precision(time: Time) -> Time:
-    """把 Astropy ``Time`` 规整到毫秒精度。
-
-    参数:
-        time: 待规整的 Astropy ``Time`` 对象。
-
-    返回:
-        新的 Astropy ``Time`` 对象，其 UTC Unix 秒被四舍五入到 0.001 s，
-        字符串显示精度固定为 3 位小数。
-    """
-
-    rounded = Time(round(float(time.utc.unix), 3), format="unix", scale="utc")
-    rounded.precision = 3
-    return rounded

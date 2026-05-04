@@ -12,9 +12,11 @@ EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前
 `epoch_time` 指定；在该参考时刻，`NTN-ECI` 的坐标轴与 `ECEF` 重合。
 参考时刻之后，`NTN-ECI` 坐标轴保持惯性固定，不随地球自转。
 
-数值形式的 `time` 和 `epoch_time` 按 UTC Unix 秒解释。字符串形式的时间会
-交给 Astropy 解析，并按 UTC 处理。工程中的时间统一使用毫秒精度；输入若包含
-更细的小数秒，会四舍五入到 0.001 s，UTC 字符串输出固定保留 3 位毫秒。
+默认情况下，数值形式的 `time` 和 `epoch_time` 按 UTC Unix 秒解释，字符串
+形式的时间会交给 Astropy 解析，并按 UTC 处理。实际工程中如果拿到的是
+`GPS time`，可以给涉及时间的函数传入 `time_system="gps"`；此时数值时间按
+GPS 连续秒解释。工程中的时间统一使用毫秒精度；输入若包含更细的小数秒，会
+四舍五入到 0.001 s，UTC 字符串输出固定保留 3 位毫秒。
 
 ## 使用示例
 
@@ -61,6 +63,26 @@ state = convert_state(
     to_frame="ntn-eci",
     time="2026-05-03T00:10:00.123",
     epoch_time="2026-05-03T00:00:00.000",
+)
+```
+
+如果实际输入是 GPS time，可以把 `time` 和 `epoch_time` 都传成 GPS 连续秒，
+并设置 `time_system="gps"`：
+
+```python
+from epheconvert import convert_state, convert_time
+
+gps_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps").value
+gps_epoch = convert_time("2026-05-03T00:00:00.000", from_system="utc", to_system="gps").value
+
+state = convert_state(
+    [7000e3, 0, 0],
+    [0, 7500, 1000],
+    from_frame="j2000",
+    to_frame="ntn-eci",
+    time=gps_time,
+    epoch_time=gps_epoch,
+    time_system="gps",
 )
 ```
 
@@ -146,6 +168,33 @@ j2000_to_ntn = convert_elements(elements, from_frame="j2000", to_frame="ntn-eci"
 j2000_to_teme = convert_elements(elements, from_frame="j2000", to_frame="teme", time=time)
 ```
 
+开普勒六根数转换同样支持 GPS time 输入：
+
+```python
+from epheconvert import KeplerianElements, convert_elements, convert_time
+
+elements = KeplerianElements(
+    a_m=7000e3,
+    eccentricity=0.001,
+    inclination_rad=0.9,
+    raan_rad=0.4,
+    argp_rad=0.2,
+    true_anomaly_rad=1.0,
+)
+
+gps_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps").value
+gps_epoch = convert_time("2026-05-03T00:00:00.000", from_system="utc", to_system="gps").value
+
+ntn_elements = convert_elements(
+    elements,
+    from_frame="j2000",
+    to_frame="ntn-eci",
+    time=gps_time,
+    epoch_time=gps_epoch,
+    time_system="gps",
+)
+```
+
 也可以在开普勒六根数和惯性系笛卡尔状态矢量之间互转：
 
 ```python
@@ -171,7 +220,7 @@ restored_elements = state_to_elements(state.position_m, state.velocity_mps)
 精确到 0.001 s。
 
 ```python
-from epheconvert import add_utc_seconds, convert_time
+from epheconvert import add_time_seconds, add_utc_seconds, convert_time
 
 utc_to_gps = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps")
 utc_to_bdt = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt")
@@ -194,6 +243,18 @@ earlier = add_utc_seconds("2026-05-03T00:00:00.123", -0.124)
 
 print(later)
 print(earlier)
+```
+
+如果输入是 GPS time，可以使用通用的 `add_time_seconds()`，返回同一时间系统
+下的结果：
+
+```python
+from epheconvert import add_time_seconds, convert_time
+
+gps_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps").value
+gps_later = add_time_seconds(gps_time, 1.234, system="gps")
+
+print(gps_later.value)
 ```
 
 ## 开发与测试

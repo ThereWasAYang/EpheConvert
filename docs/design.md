@@ -10,7 +10,7 @@ EpheConvert 的目标是提供一组轻量 Python API，用于完成 3GPP NR NTN
 - `elements.py`：负责 `NTN-ECI`、`TEME`、`J2000` 之间的开普勒六根数转换，以及六根数和状态矢量之间的互转。
 - `time.py`：负责 `UTC`、`GPS time`、`BDT`（北斗时间）之间的互转，以及 UTC 时间加减秒的工具函数。
 
-工程的公共 API 从 `src/epheconvert/__init__.py` 导出。用户通常只需要从 `epheconvert` 直接导入 `convert_state`、`convert_elements`、`convert_time`、`add_utc_seconds` 等函数。
+工程的公共 API 从 `src/epheconvert/__init__.py` 导出。用户通常只需要从 `epheconvert` 直接导入 `convert_state`、`convert_elements`、`convert_time`、`add_time_seconds`、`add_utc_seconds` 等函数。
 
 ## 统一约定
 
@@ -30,12 +30,13 @@ EpheConvert 的目标是提供一组轻量 Python API，用于完成 3GPP NR NTN
 
 工程中的时间统一规整到毫秒精度。具体规则是：
 
-- 时间字符串交给 Astropy 解析后，按 UTC Unix 秒四舍五入到 0.001 s。
+- 时间字符串默认按 UTC 交给 Astropy 解析后，按 UTC Unix 秒四舍五入到 0.001 s。
 - 数值形式的 UTC 输入按 UTC Unix 秒解释，并四舍五入到 0.001 s。
+- 状态矢量和开普勒根数转换可以通过 `time_system="gps"` 让数值 `time` 和 `epoch_time` 按 GPS 连续秒解释；也可以通过 `epoch_time_system` 单独指定 `epoch_time` 的时间系统。
 - `GPS time` 和 `BDT` 的连续秒输入、输出都保留到 0.001 s。
 - UTC 输出使用 ISO 字符串，并固定保留 3 位毫秒。
 
-这一逻辑分别在 `coordinates._to_time()` 和 `time._with_millisecond_precision()` 中实现。
+这一逻辑集中在 `time._to_astropy_time()` 和 `time._with_millisecond_precision()` 中实现，`coordinates._to_time()` 会复用同一套解析逻辑。
 
 ### 参考系名称
 
@@ -70,15 +71,31 @@ StateVector(position_m, velocity_mps)
 状态矢量转换入口是：
 
 ```python
-convert_state(position_m, velocity_mps, from_frame, to_frame, time, epoch_time=None)
+convert_state(
+    position_m,
+    velocity_mps,
+    from_frame,
+    to_frame,
+    time,
+    epoch_time=None,
+    time_system="utc",
+    epoch_time_system=None,
+)
 ```
 
 设计上，`convert_state()` 做四件事：
 
 1. 把输入位置和速度封装成 `StateVector`。
-2. 把 `time` 解析为毫秒精度的 Astropy `Time`。
+2. 按 `time_system` 把 `time` 解析为毫秒精度的 Astropy `Time`。
 3. 规范化 `from_frame` 和 `to_frame`。
-4. 先把源参考系转换到内部惯性表示，再从内部惯性表示转换到目标参考系。
+4. 如果涉及 `NTN-ECI`，按 `epoch_time_system` 或 `time_system` 解析 `epoch_time`。
+5. 先把源参考系转换到内部惯性表示，再从内部惯性表示转换到目标参考系。
+
+`time_system` 支持 `utc`、`gps`、`bdt` 及少量别名。实际使用中如果输入大多来自接收机或星历消息中的 GPS time，可以直接传 GPS 连续秒：
+
+```python
+convert_state(..., time=gps_time, epoch_time=gps_epoch, time_system="gps")
+```
 
 内部惯性表示使用 `GCRS`/`J2000` 作为中间层。这样不同参考系之间不需要各自实现一套直接转换，只要实现“到中间层”和“从中间层返回”两类函数即可。
 
@@ -171,14 +188,23 @@ convert_state(position_m, velocity_mps, from_frame, to_frame, time, epoch_time=N
 入口函数是：
 
 ```python
-convert_elements(elements, from_frame, to_frame, time, epoch_time=None, mu_m3_s2=EARTH_MU_M3_S2)
+convert_elements(
+    elements,
+    from_frame,
+    to_frame,
+    time,
+    epoch_time=None,
+    time_system="utc",
+    epoch_time_system=None,
+    mu_m3_s2=EARTH_MU_M3_S2,
+)
 ```
 
 具体流程：
 
 1. `_require_inertial_elements_frame()` 检查源和目标参考系是否属于 `NTN-ECI`、`TEME`、`J2000`。
 2. `elements_to_state()` 把源参考系下的六根数转换为源参考系下的状态矢量。
-3. `convert_state()` 完成状态矢量参考系转换。
+3. `convert_state()` 完成状态矢量参考系转换，并继承 `time_system` / `epoch_time_system` 对 GPS time 等输入的支持。
 4. `state_to_elements()` 把目标参考系下的状态矢量恢复为目标参考系下的六根数。
 
 这样做的好处是复用状态矢量转换模块，避免为每一对根数参考系单独推导角元素转换公式。
@@ -267,6 +293,12 @@ convert_time(value, from_system, to_system)
 add_utc_seconds(utc_time, seconds)
 ```
 
+如果需要对 GPS time 或 BDT 加减秒数，可以使用通用工具函数：
+
+```python
+add_time_seconds(value, seconds, system="gps")
+```
+
 返回值是 `TimeConversion`：
 
 - `system`：输出时间系统。
@@ -274,6 +306,7 @@ add_utc_seconds(utc_time, seconds)
 - `astropy_time`：同一物理时刻对应的 Astropy `Time` 对象。
 
 `add_utc_seconds()` 的返回值是毫秒精度 UTC ISO 字符串。
+`add_time_seconds()` 返回 `TimeConversion`，输出系统与输入 `system` 保持一致。
 
 ### 设计思路
 
@@ -285,14 +318,14 @@ add_utc_seconds(utc_time, seconds)
 
 这样可以复用 Astropy 对 UTC、GPS、闰秒等时间尺度的处理。
 
-UTC 加减秒也复用同一套时间处理逻辑：
+时间加减秒也复用同一套时间处理逻辑：
 
-1. 将输入 UTC 时间通过 `_to_astropy_time(value, "utc")` 转为毫秒精度 Astropy `Time`。
+1. 将输入时间通过 `_to_astropy_time(value, system)` 转为毫秒精度 Astropy `Time`。
 2. 将 `seconds` 四舍五入到 0.001 s。
 3. 使用 Astropy `TimeDelta(..., format="sec")` 做时间平移。
-4. 通过 `_from_astropy_time(..., "utc")` 输出毫秒精度 UTC ISO 字符串。
+4. 通过 `_from_astropy_time(..., system)` 输出同一时间系统下的毫秒精度结果。
 
-这样可以让 UTC 加减秒与系统时间转换共享同一套毫秒精度和闰秒处理规则。
+这样可以让 UTC、GPS time、BDT 的加减秒与系统时间转换共享同一套毫秒精度和闰秒处理规则。
 
 ### UTC
 

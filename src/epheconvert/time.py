@@ -73,26 +73,49 @@ def add_utc_seconds(utc_time: Time | str | float, seconds: float) -> str:
     return _from_astropy_time(shifted, "utc")  # type: ignore[return-value]
 
 
-def _to_astropy_time(value: Time | str | float, system: TimeSystem) -> Time:
+def add_time_seconds(value: Time | str | float, seconds: float, *, system: TimeSystem) -> TimeConversion:
+    """对指定时间系统下的时间加减秒数。
+
+    参数:
+        value: 输入时间值。``UTC`` 可传 ISO 字符串、UTC Unix 秒或 Astropy
+            ``Time``；``GPS`` 和 ``BDT`` 传相对于各自系统历元的连续秒。
+        seconds: 要加减的秒数，单位为 s。正数表示向后加时间，负数表示
+            向前减时间；可以是小数。
+        system: 输入和输出使用的时间系统，支持 ``"utc"``、``"gps"``、
+            ``"bdt"`` 及少量别名。
+
+    返回:
+        ``TimeConversion``。其中 ``value`` 是加减后的同系统时间值；
+        ``astropy_time`` 是同一物理时刻的 Astropy 表示。
+    """
+
+    normalized = _normalize_system(system)
+    base_time = _to_astropy_time(value, normalized)
+    shifted = base_time + TimeDelta(_round_milliseconds(seconds), format="sec")
+    return TimeConversion(normalized, _from_astropy_time(shifted, normalized), _with_millisecond_precision(shifted))
+
+
+def _to_astropy_time(value: Time | str | float, system: str) -> Time:
     """把指定时间系统下的输入值转换为 Astropy ``Time``。
 
     参数:
         value: 输入时间值；会规整到毫秒精度。
-        system: 输入值所属时间系统。
+        system: 输入值所属时间系统，支持常见别名。
 
     返回:
         毫秒精度的 Astropy ``Time`` 对象。
     """
 
+    normalized = _normalize_system(system)
     if isinstance(value, Time):
         return _with_millisecond_precision(value)
-    if system == "utc":
+    if normalized == "utc":
         if isinstance(value, (int, float)):
             return _with_millisecond_precision(Time(float(value), format="unix", scale="utc"))
         return _with_millisecond_precision(Time(value, scale="utc"))
-    if system == "gps":
+    if normalized == "gps":
         return _with_millisecond_precision(Time(_round_milliseconds(float(value)), format="gps"))
-    if system == "bdt":
+    if normalized == "bdt":
         return _with_millisecond_precision(Time(_bdt_epoch_gps_seconds() + _round_milliseconds(float(value)), format="gps"))
     raise ValueError(f"unsupported time system {system!r}")
 

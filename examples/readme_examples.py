@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from epheconvert import (
     KeplerianElements,
+    add_time_seconds,
     add_utc_seconds,
     convert_elements,
     convert_state,
@@ -21,6 +22,8 @@ from epheconvert import (
 
 TIME = "2026-05-03T00:00:00.123"
 NTN_EPOCH = "2026-05-03T00:00:00.000"
+GPS_TIME = convert_time(TIME, from_system="utc", to_system="gps").value
+GPS_NTN_EPOCH = convert_time(NTN_EPOCH, from_system="utc", to_system="gps").value
 
 
 def print_state(name, state):
@@ -109,6 +112,27 @@ def example_ecef_to_ntn_state():
     )
 
 
+def example_gps_time_state_conversion():
+    """示例：使用 GPS time 输入进行状态矢量转换。
+
+    参数:
+        无。
+
+    返回:
+        ``StateVector``，表示 ``NTN-ECI`` 下的位置和速度。
+    """
+
+    return convert_state(
+        [7000e3, 0, 0],
+        [0, 7500, 1000],
+        from_frame="j2000",
+        to_frame="ntn-eci",
+        time=GPS_TIME,
+        epoch_time=GPS_NTN_EPOCH,
+        time_system="gps",
+    )
+
+
 def example_all_state_conversions():
     """示例：四种坐标参考系之间的全部有向状态矢量转换。
 
@@ -162,6 +186,34 @@ def example_ntn_to_teme_elements():
         to_frame="teme",
         time=TIME,
         epoch_time=NTN_EPOCH,
+    )
+
+
+def example_gps_time_element_conversion():
+    """示例：使用 GPS time 输入进行开普勒六根数转换。
+
+    参数:
+        无。
+
+    返回:
+        ``KeplerianElements``，表示 ``NTN-ECI`` 下的开普勒六根数。
+    """
+
+    elements = KeplerianElements(
+        a_m=7000e3,
+        eccentricity=0.001,
+        inclination_rad=0.9,
+        raan_rad=0.4,
+        argp_rad=0.2,
+        true_anomaly_rad=1.0,
+    )
+    return convert_elements(
+        elements,
+        from_frame="j2000",
+        to_frame="ntn-eci",
+        time=GPS_TIME,
+        epoch_time=GPS_NTN_EPOCH,
+        time_system="gps",
     )
 
 
@@ -254,6 +306,7 @@ def example_add_utc_seconds():
     return {
         "plus_1_234_seconds": add_utc_seconds(TIME, 1.234),
         "minus_0_124_seconds": add_utc_seconds(TIME, -0.124),
+        "gps_plus_1_234_seconds": add_time_seconds(GPS_TIME, 1.234, system="gps").value,
     }
 
 
@@ -269,12 +322,14 @@ def main():
 
     print_state("J2000 -> ECEF 状态矢量", example_j2000_to_ecef_state())
     print_state("ECEF -> NTN-ECI 状态矢量", example_ecef_to_ntn_state())
+    print_state("GPS time 输入的 J2000 -> NTN-ECI 状态矢量", example_gps_time_state_conversion())
 
     print("\n全部状态矢量转换")
     for name, state in example_all_state_conversions().items():
         print_state(name, state)
 
     print_elements("NTN-ECI -> TEME 开普勒六根数", example_ntn_to_teme_elements())
+    print_elements("GPS time 输入的 J2000 -> NTN-ECI 开普勒六根数", example_gps_time_element_conversion())
 
     print("\n全部开普勒六根数转换")
     for name, elements in example_all_element_conversions().items():
