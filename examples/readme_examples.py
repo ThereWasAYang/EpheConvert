@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from epheconvert import (
     KeplerianElements,
+    add_utc_seconds,
     convert_elements,
     convert_state,
     convert_time,
@@ -240,6 +241,22 @@ def example_all_time_conversions():
     }
 
 
+def example_add_utc_seconds():
+    """示例：对 UTC 时间加减指定秒数。
+
+    参数:
+        无。
+
+    返回:
+        ``dict``。键表示加减方向，值为计算后的毫秒精度 UTC ISO 字符串。
+    """
+
+    return {
+        "plus_1_234_seconds": add_utc_seconds(TIME, 1.234),
+        "minus_0_124_seconds": add_utc_seconds(TIME, -0.124),
+    }
+
+
 def main():
     """顺序运行 README 中的全部示例。
 
@@ -270,6 +287,10 @@ def main():
     print("\n全部时间转换")
     for name, converted in example_all_time_conversions().items():
         print_time(name, converted)
+
+    print("\nUTC 时间加减秒")
+    for name, utc_time in example_add_utc_seconds().items():
+        print(f"{name} = {utc_time}")
 
 
 if __name__ == "__main__":

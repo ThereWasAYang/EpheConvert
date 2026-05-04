@@ -8,9 +8,9 @@ EpheConvert 的目标是提供一组轻量 Python API，用于完成 3GPP NR NTN
 
 - `coordinates.py`：负责 `ECEF`、`NTN-ECI`、`TEME`、`J2000` 之间的位置坐标和速度矢量转换。
 - `elements.py`：负责 `NTN-ECI`、`TEME`、`J2000` 之间的开普勒六根数转换，以及六根数和状态矢量之间的互转。
-- `time.py`：负责 `UTC`、`GPS time`、`BDT`（北斗时间）之间的互转。
+- `time.py`：负责 `UTC`、`GPS time`、`BDT`（北斗时间）之间的互转，以及 UTC 时间加减秒的工具函数。
 
-工程的公共 API 从 `src/epheconvert/__init__.py` 导出。用户通常只需要从 `epheconvert` 直接导入 `convert_state`、`convert_elements`、`convert_time` 等函数。
+工程的公共 API 从 `src/epheconvert/__init__.py` 导出。用户通常只需要从 `epheconvert` 直接导入 `convert_state`、`convert_elements`、`convert_time`、`add_utc_seconds` 等函数。
 
 ## 统一约定
 
@@ -261,11 +261,19 @@ a = -mu / (2 * energy)
 convert_time(value, from_system, to_system)
 ```
 
+如果只需要对 UTC 时间加减一段秒数，可以使用工具函数：
+
+```python
+add_utc_seconds(utc_time, seconds)
+```
+
 返回值是 `TimeConversion`：
 
 - `system`：输出时间系统。
 - `value`：输出值。UTC 为 ISO 字符串，GPS/BDT 为连续秒。
 - `astropy_time`：同一物理时刻对应的 Astropy `Time` 对象。
+
+`add_utc_seconds()` 的返回值是毫秒精度 UTC ISO 字符串。
 
 ### 设计思路
 
@@ -276,6 +284,15 @@ convert_time(value, from_system, to_system)
 ```
 
 这样可以复用 Astropy 对 UTC、GPS、闰秒等时间尺度的处理。
+
+UTC 加减秒也复用同一套时间处理逻辑：
+
+1. 将输入 UTC 时间通过 `_to_astropy_time(value, "utc")` 转为毫秒精度 Astropy `Time`。
+2. 将 `seconds` 四舍五入到 0.001 s。
+3. 使用 Astropy `TimeDelta(..., format="sec")` 做时间平移。
+4. 通过 `_from_astropy_time(..., "utc")` 输出毫秒精度 UTC ISO 字符串。
+
+这样可以让 UTC 加减秒与系统时间转换共享同一套毫秒精度和闰秒处理规则。
 
 ### UTC
 
@@ -355,6 +372,7 @@ NumPy 负责：
 - 开普勒六根数与状态矢量互转后，状态矢量应保持一致。
 - 开普勒根数跨惯性参考系转换后，与直接转换状态矢量的结果一致。
 - UTC、GPS time、BDT 能够往返转换。
+- UTC 时间可以加减正数、负数和小数秒。
 - 时间输入超过毫秒时，会四舍五入到毫秒。
 
 示例脚本 `examples/readme_examples.py` 不是严格单元测试，但可以作为人工验证入口。它把 README 中的示例整理成独立函数，方便逐项运行。

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from epheconvert import KeplerianElements, convert_elements, convert_state, convert_time
+from epheconvert import KeplerianElements, add_utc_seconds, convert_elements, convert_state, convert_time
 from epheconvert.elements import elements_to_state, state_to_elements
 
 
@@ -127,3 +127,12 @@ def test_time_inputs_are_rounded_to_milliseconds():
 
     assert utc.value == "2006-01-01T00:00:00.124"
     assert gps.value == pytest.approx(0.124)
+
+
+def test_add_utc_seconds_supports_fractional_positive_and_negative_offsets():
+    assert add_utc_seconds("2026-05-03T00:00:00.123", 1.234) == "2026-05-03T00:00:01.357"
+    assert add_utc_seconds("2026-05-03T00:00:00.123", -0.124) == "2026-05-02T23:59:59.999"
+
+
+def test_add_utc_seconds_rounds_inputs_and_offset_to_milliseconds():
+    assert add_utc_seconds("2026-05-03T00:00:00.1236", 0.0006) == "2026-05-03T00:00:00.125"

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 
 TimeSystem = Literal["utc", "gps", "bdt"]
 GPS_EPOCH_UTC = "1980-01-06T00:00:00.000"
@@ -53,6 +53,24 @@ def convert_time(value: Time | str | float, *, from_system: TimeSystem, to_syste
     target = _normalize_system(to_system)
     time = _to_astropy_time(value, source)
     return TimeConversion(target, _from_astropy_time(time, target), time)
+
+
+def add_utc_seconds(utc_time: Time | str | float, seconds: float) -> str:
+    """对 UTC 时间加减指定秒数，并返回计算后的 UTC 时间。
+
+    参数:
+        utc_time: 输入 UTC 时间。可传 ISO 字符串、UTC Unix 秒或 Astropy
+            ``Time``；输入会先规整到毫秒精度。
+        seconds: 要加减的秒数，单位为 s。正数表示向后加时间，负数表示
+            向前减时间；可以是小数。
+
+    返回:
+        毫秒精度的 UTC ISO 字符串。
+    """
+
+    base_time = _to_astropy_time(utc_time, "utc")
+    shifted = base_time + TimeDelta(_round_milliseconds(seconds), format="sec")
+    return _from_astropy_time(shifted, "utc")  # type: ignore[return-value]
 
 
 def _to_astropy_time(value: Time | str | float, system: TimeSystem) -> Time:

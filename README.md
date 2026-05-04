@@ -171,7 +171,7 @@ restored_elements = state_to_elements(state.position_m, state.velocity_mps)
 精确到 0.001 s。
 
 ```python
-from epheconvert import convert_time
+from epheconvert import add_utc_seconds, convert_time
 
 utc_to_gps = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps")
 utc_to_bdt = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt")
@@ -181,6 +181,19 @@ gps_to_bdt = convert_time(utc_to_gps.value, from_system="gps", to_system="bdt")
 
 bdt_to_utc = convert_time(utc_to_bdt.value, from_system="bdt", to_system="utc")
 bdt_to_gps = convert_time(utc_to_bdt.value, from_system="bdt", to_system="gps")
+```
+
+如果只需要对一个 UTC 时间加减指定秒数，可以使用 `add_utc_seconds()`。秒数
+可以是正数、负数或小数，返回值仍是毫秒精度 UTC ISO 字符串。
+
+```python
+from epheconvert import add_utc_seconds
+
+later = add_utc_seconds("2026-05-03T00:00:00.123", 1.234)
+earlier = add_utc_seconds("2026-05-03T00:00:00.123", -0.124)
+
+print(later)
+print(earlier)
 ```
 
 ## 开发与测试
