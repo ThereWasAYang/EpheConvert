@@ -9,6 +9,8 @@ TIME = "2026-05-03T00:00:00.123"
 NTN_EPOCH = "2026-05-03T00:00:00.000"
 GPS_TIME = convert_time(TIME, from_system="utc", to_system="gps").value
 GPS_NTN_EPOCH = convert_time(NTN_EPOCH, from_system="utc", to_system="gps").value
+BDT_TIME = convert_time(TIME, from_system="utc", to_system="bdt").value
+BDT_NTN_EPOCH = convert_time(NTN_EPOCH, from_system="utc", to_system="bdt").value
 
 
 @pytest.mark.parametrize(
@@ -33,6 +35,8 @@ def test_state_round_trip(source, target):
         to_frame=target,
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
     restored = convert_state(
         converted.position_m,
@@ -41,6 +45,8 @@ def test_state_round_trip(source, target):
         to_frame=source,
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
 
     assert np.allclose(restored.position_m, position, atol=1e-3)
@@ -58,6 +64,8 @@ def test_ntn_eci_matches_ecef_at_epoch_for_position_orientation():
         to_frame="ntn-eci",
         time=NTN_EPOCH,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
 
     assert np.allclose(converted.position_m, position, atol=1e-3)
@@ -74,6 +82,8 @@ def test_state_conversion_accepts_gps_time():
         to_frame="ntn-eci",
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
     from_gps = convert_state(
         position,
@@ -83,10 +93,23 @@ def test_state_conversion_accepts_gps_time():
         time=GPS_TIME,
         epoch_time=GPS_NTN_EPOCH,
         time_system="gps",
+        epoch_time_system="gps",
+    )
+    from_bdt = convert_state(
+        position,
+        velocity,
+        from_frame="j2000",
+        to_frame="ntn-eci",
+        time=BDT_TIME,
+        epoch_time=BDT_NTN_EPOCH,
+        time_system="bdt",
+        epoch_time_system="bdt",
     )
 
     assert np.allclose(from_gps.position_m, from_utc.position_m, atol=1e-6)
     assert np.allclose(from_gps.velocity_mps, from_utc.velocity_mps, atol=1e-9)
+    assert np.allclose(from_bdt.position_m, from_utc.position_m, atol=1e-6)
+    assert np.allclose(from_bdt.velocity_mps, from_utc.velocity_mps, atol=1e-9)
 
 
 def test_elements_round_trip_state():
@@ -123,6 +146,8 @@ def test_convert_elements_between_inertial_frames_preserves_cartesian_state():
         to_frame="j2000",
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
 
     ntn_state = elements_to_state(elements)
@@ -134,6 +159,8 @@ def test_convert_elements_between_inertial_frames_preserves_cartesian_state():
         to_frame="j2000",
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
     assert np.allclose(j2000_state.position_m, expected.position_m, atol=1e-5)
     assert np.allclose(j2000_state.velocity_mps, expected.velocity_mps, atol=1e-8)
@@ -155,6 +182,8 @@ def test_element_conversion_accepts_gps_time():
         to_frame="ntn-eci",
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
     from_gps = convert_elements(
         elements,
@@ -163,12 +192,25 @@ def test_element_conversion_accepts_gps_time():
         time=GPS_TIME,
         epoch_time=GPS_NTN_EPOCH,
         time_system="gps",
+        epoch_time_system="gps",
+    )
+    from_bdt = convert_elements(
+        elements,
+        from_frame="j2000",
+        to_frame="ntn-eci",
+        time=BDT_TIME,
+        epoch_time=BDT_NTN_EPOCH,
+        time_system="bdt",
+        epoch_time_system="bdt",
     )
 
     utc_state = elements_to_state(from_utc)
     gps_state = elements_to_state(from_gps)
+    bdt_state = elements_to_state(from_bdt)
     assert np.allclose(gps_state.position_m, utc_state.position_m, atol=1e-5)
     assert np.allclose(gps_state.velocity_mps, utc_state.velocity_mps, atol=1e-8)
+    assert np.allclose(bdt_state.position_m, utc_state.position_m, atol=1e-5)
+    assert np.allclose(bdt_state.velocity_mps, utc_state.velocity_mps, atol=1e-8)
 
 
 def test_time_conversions():
@@ -203,3 +245,10 @@ def test_add_time_seconds_supports_gps_time():
 
     assert shifted.system == "gps"
     assert shifted.value == pytest.approx(GPS_TIME + 1.234)
+
+
+def test_add_time_seconds_supports_bdt_time():
+    shifted = add_time_seconds(BDT_TIME, -0.124, system="bdt")
+
+    assert shifted.system == "bdt"
+    assert shifted.value == pytest.approx(BDT_TIME - 0.124)

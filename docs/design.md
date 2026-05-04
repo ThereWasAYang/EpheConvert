@@ -8,7 +8,7 @@ EpheConvert 的目标是提供一组轻量 Python API，用于完成 3GPP NR NTN
 
 - `coordinates.py`：负责 `ECEF`、`NTN-ECI`、`TEME`、`J2000` 之间的位置坐标和速度矢量转换。
 - `elements.py`：负责 `NTN-ECI`、`TEME`、`J2000` 之间的开普勒六根数转换，以及六根数和状态矢量之间的互转。
-- `time.py`：负责 `UTC`、`GPS time`、`BDT`（北斗时间）之间的互转，以及 UTC 时间加减秒的工具函数。
+- `time.py`：负责 `UTC`、`GPS time`、`BDT`（北斗时间）之间的互转，以及通用时间加减秒的工具函数。
 
 工程的公共 API 从 `src/epheconvert/__init__.py` 导出。用户通常只需要从 `epheconvert` 直接导入 `convert_state`、`convert_elements`、`convert_time`、`add_time_seconds`、`add_utc_seconds` 等函数。
 
@@ -32,7 +32,7 @@ EpheConvert 的目标是提供一组轻量 Python API，用于完成 3GPP NR NTN
 
 - 时间字符串默认按 UTC 交给 Astropy 解析后，按 UTC Unix 秒四舍五入到 0.001 s。
 - 数值形式的 UTC 输入按 UTC Unix 秒解释，并四舍五入到 0.001 s。
-- 状态矢量和开普勒根数转换可以通过 `time_system="gps"` 让数值 `time` 和 `epoch_time` 按 GPS 连续秒解释；也可以通过 `epoch_time_system` 单独指定 `epoch_time` 的时间系统。
+- 状态矢量和开普勒根数转换可以通过 `time_system="gps"` 让数值 `time` 和 `epoch_time` 按 GPS 连续秒解释，也可以通过 `time_system="bdt"` 按北斗连续秒解释；可以通过 `epoch_time_system` 单独指定 `epoch_time` 的时间系统。
 - `GPS time` 和 `BDT` 的连续秒输入、输出都保留到 0.001 s。
 - UTC 输出使用 ISO 字符串，并固定保留 3 位毫秒。
 
@@ -94,7 +94,13 @@ convert_state(
 `time_system` 支持 `utc`、`gps`、`bdt` 及少量别名。实际使用中如果输入大多来自接收机或星历消息中的 GPS time，可以直接传 GPS 连续秒：
 
 ```python
-convert_state(..., time=gps_time, epoch_time=gps_epoch, time_system="gps")
+convert_state(..., time=gps_time, epoch_time=gps_epoch, time_system="gps", epoch_time_system="gps")
+```
+
+如果输入是 BDT，则传北斗连续秒：
+
+```python
+convert_state(..., time=bdt_time, epoch_time=bdt_epoch, time_system="bdt", epoch_time_system="bdt")
 ```
 
 内部惯性表示使用 `GCRS`/`J2000` 作为中间层。这样不同参考系之间不需要各自实现一套直接转换，只要实现“到中间层”和“从中间层返回”两类函数即可。

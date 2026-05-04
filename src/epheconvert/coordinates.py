@@ -81,7 +81,8 @@ def convert_state(
             ``"teme"``、``"j2000"`` 及少量别名。
         to_frame: 输出参考系，取值范围与 ``from_frame`` 相同。
         time: 状态矢量对应的时刻。默认按 UTC 解释；当
-            ``time_system="gps"`` 时，数值按 GPS 连续秒解释。输入内部会
+            ``time_system="gps"`` 时，数值按 GPS 连续秒解释；当
+            ``time_system="bdt"`` 时，数值按北斗连续秒解释。输入内部会
             规整到毫秒精度。
         epoch_time: ``NTN-ECI`` 的参考时刻。只要输入或输出参考系包含
             ``"ntn-eci"``，该参数就是必填项；数值和毫秒精度约定与

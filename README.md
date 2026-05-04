@@ -15,8 +15,9 @@ EpheConvert 是一个用于星历与时间系统转换的 Python 工程，当前
 默认情况下，数值形式的 `time` 和 `epoch_time` 按 UTC Unix 秒解释，字符串
 形式的时间会交给 Astropy 解析，并按 UTC 处理。实际工程中如果拿到的是
 `GPS time`，可以给涉及时间的函数传入 `time_system="gps"`；此时数值时间按
-GPS 连续秒解释。工程中的时间统一使用毫秒精度；输入若包含更细的小数秒，会
-四舍五入到 0.001 s，UTC 字符串输出固定保留 3 位毫秒。
+GPS 连续秒解释。如果输入是 `BDT`（北斗时间），可以传入 `time_system="bdt"`；
+此时数值时间按北斗连续秒解释。工程中的时间统一使用毫秒精度；输入若包含更细
+的小数秒，会四舍五入到 0.001 s，UTC 字符串输出固定保留 3 位毫秒。
 
 ## 使用示例
 
@@ -45,6 +46,7 @@ state = convert_state(
     from_frame="j2000",
     to_frame="ecef",
     time="2026-05-03T00:00:00.123",
+    time_system="utc",
 )
 
 print(state.position_m)
@@ -63,11 +65,13 @@ state = convert_state(
     to_frame="ntn-eci",
     time="2026-05-03T00:10:00.123",
     epoch_time="2026-05-03T00:00:00.000",
+    time_system="utc",
+    epoch_time_system="utc",
 )
 ```
 
 如果实际输入是 GPS time，可以把 `time` 和 `epoch_time` 都传成 GPS 连续秒，
-并设置 `time_system="gps"`：
+并设置 `time_system="gps"` 和 `epoch_time_system="gps"`：
 
 ```python
 from epheconvert import convert_state, convert_time
@@ -83,6 +87,28 @@ state = convert_state(
     time=gps_time,
     epoch_time=gps_epoch,
     time_system="gps",
+    epoch_time_system="gps",
+)
+```
+
+如果实际输入是 BDT，可以把 `time` 和 `epoch_time` 都传成北斗连续秒，并设置
+`time_system="bdt"` 和 `epoch_time_system="bdt"`：
+
+```python
+from epheconvert import convert_state, convert_time
+
+bdt_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt").value
+bdt_epoch = convert_time("2026-05-03T00:00:00.000", from_system="utc", to_system="bdt").value
+
+state = convert_state(
+    [7000e3, 0, 0],
+    [0, 7500, 1000],
+    from_frame="j2000",
+    to_frame="ntn-eci",
+    time=bdt_time,
+    epoch_time=bdt_epoch,
+    time_system="bdt",
+    epoch_time_system="bdt",
 )
 ```
 
@@ -96,21 +122,21 @@ velocity_mps = [0, 7500, 1000]
 time = "2026-05-03T00:00:00.123"
 epoch_time = "2026-05-03T00:00:00.000"
 
-ecef_to_ntn = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
-ecef_to_teme = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="teme", time=time)
-ecef_to_j2000 = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="j2000", time=time)
+ecef_to_ntn = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="ntn-eci", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+ecef_to_teme = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="teme", time=time, time_system="utc")
+ecef_to_j2000 = convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="j2000", time=time, time_system="utc")
 
-ntn_to_ecef = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="ecef", time=time, epoch_time=epoch_time)
-ntn_to_teme = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="teme", time=time, epoch_time=epoch_time)
-ntn_to_j2000 = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="j2000", time=time, epoch_time=epoch_time)
+ntn_to_ecef = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="ecef", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+ntn_to_teme = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="teme", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+ntn_to_j2000 = convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="j2000", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
 
-teme_to_ecef = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ecef", time=time)
-teme_to_ntn = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
-teme_to_j2000 = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="j2000", time=time)
+teme_to_ecef = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ecef", time=time, time_system="utc")
+teme_to_ntn = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ntn-eci", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+teme_to_j2000 = convert_state(position_m, velocity_mps, from_frame="teme", to_frame="j2000", time=time, time_system="utc")
 
-j2000_to_ecef = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ecef", time=time)
-j2000_to_ntn = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
-j2000_to_teme = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="teme", time=time)
+j2000_to_ecef = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ecef", time=time, time_system="utc")
+j2000_to_ntn = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ntn-eci", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+j2000_to_teme = convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="teme", time=time, time_system="utc")
 ```
 
 ### 开普勒六根数转换
@@ -136,6 +162,8 @@ teme_elements = convert_elements(
     to_frame="teme",
     time="2026-05-03T00:00:00.123",
     epoch_time="2026-05-03T00:00:00.000",
+    time_system="utc",
+    epoch_time_system="utc",
 )
 
 print(teme_elements)
@@ -158,14 +186,14 @@ elements = KeplerianElements(
 time = "2026-05-03T00:00:00.123"
 epoch_time = "2026-05-03T00:00:00.000"
 
-ntn_to_teme = convert_elements(elements, from_frame="ntn-eci", to_frame="teme", time=time, epoch_time=epoch_time)
-ntn_to_j2000 = convert_elements(elements, from_frame="ntn-eci", to_frame="j2000", time=time, epoch_time=epoch_time)
+ntn_to_teme = convert_elements(elements, from_frame="ntn-eci", to_frame="teme", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+ntn_to_j2000 = convert_elements(elements, from_frame="ntn-eci", to_frame="j2000", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
 
-teme_to_ntn = convert_elements(elements, from_frame="teme", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
-teme_to_j2000 = convert_elements(elements, from_frame="teme", to_frame="j2000", time=time)
+teme_to_ntn = convert_elements(elements, from_frame="teme", to_frame="ntn-eci", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+teme_to_j2000 = convert_elements(elements, from_frame="teme", to_frame="j2000", time=time, time_system="utc")
 
-j2000_to_ntn = convert_elements(elements, from_frame="j2000", to_frame="ntn-eci", time=time, epoch_time=epoch_time)
-j2000_to_teme = convert_elements(elements, from_frame="j2000", to_frame="teme", time=time)
+j2000_to_ntn = convert_elements(elements, from_frame="j2000", to_frame="ntn-eci", time=time, epoch_time=epoch_time, time_system="utc", epoch_time_system="utc")
+j2000_to_teme = convert_elements(elements, from_frame="j2000", to_frame="teme", time=time, time_system="utc")
 ```
 
 开普勒六根数转换同样支持 GPS time 输入：
@@ -192,6 +220,35 @@ ntn_elements = convert_elements(
     time=gps_time,
     epoch_time=gps_epoch,
     time_system="gps",
+    epoch_time_system="gps",
+)
+```
+
+BDT 输入方式类似：
+
+```python
+from epheconvert import KeplerianElements, convert_elements, convert_time
+
+elements = KeplerianElements(
+    a_m=7000e3,
+    eccentricity=0.001,
+    inclination_rad=0.9,
+    raan_rad=0.4,
+    argp_rad=0.2,
+    true_anomaly_rad=1.0,
+)
+
+bdt_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt").value
+bdt_epoch = convert_time("2026-05-03T00:00:00.000", from_system="utc", to_system="bdt").value
+
+ntn_elements = convert_elements(
+    elements,
+    from_frame="j2000",
+    to_frame="ntn-eci",
+    time=bdt_time,
+    epoch_time=bdt_epoch,
+    time_system="bdt",
+    epoch_time_system="bdt",
 )
 ```
 
@@ -255,6 +312,17 @@ gps_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system=
 gps_later = add_time_seconds(gps_time, 1.234, system="gps")
 
 print(gps_later.value)
+```
+
+BDT 也使用同一个通用函数：
+
+```python
+from epheconvert import add_time_seconds, convert_time
+
+bdt_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt").value
+bdt_earlier = add_time_seconds(bdt_time, -0.124, system="bdt")
+
+print(bdt_earlier.value)
 ```
 
 ## 开发与测试

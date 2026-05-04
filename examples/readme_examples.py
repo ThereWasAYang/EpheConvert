@@ -24,6 +24,8 @@ TIME = "2026-05-03T00:00:00.123"
 NTN_EPOCH = "2026-05-03T00:00:00.000"
 GPS_TIME = convert_time(TIME, from_system="utc", to_system="gps").value
 GPS_NTN_EPOCH = convert_time(NTN_EPOCH, from_system="utc", to_system="gps").value
+BDT_TIME = convert_time(TIME, from_system="utc", to_system="bdt").value
+BDT_NTN_EPOCH = convert_time(NTN_EPOCH, from_system="utc", to_system="bdt").value
 
 
 def print_state(name, state):
@@ -89,6 +91,7 @@ def example_j2000_to_ecef_state():
         from_frame="j2000",
         to_frame="ecef",
         time=TIME,
+        time_system="utc",
     )
 
 
@@ -109,6 +112,8 @@ def example_ecef_to_ntn_state():
         to_frame="ntn-eci",
         time="2026-05-03T00:10:00.123",
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
 
 
@@ -130,6 +135,29 @@ def example_gps_time_state_conversion():
         time=GPS_TIME,
         epoch_time=GPS_NTN_EPOCH,
         time_system="gps",
+        epoch_time_system="gps",
+    )
+
+
+def example_bdt_time_state_conversion():
+    """示例：使用 BDT 输入进行状态矢量转换。
+
+    参数:
+        无。
+
+    返回:
+        ``StateVector``，表示 ``NTN-ECI`` 下的位置和速度。
+    """
+
+    return convert_state(
+        [7000e3, 0, 0],
+        [0, 7500, 1000],
+        from_frame="j2000",
+        to_frame="ntn-eci",
+        time=BDT_TIME,
+        epoch_time=BDT_NTN_EPOCH,
+        time_system="bdt",
+        epoch_time_system="bdt",
     )
 
 
@@ -147,18 +175,18 @@ def example_all_state_conversions():
     position_m = [7000e3, 0, 0]
     velocity_mps = [0, 7500, 1000]
     return {
-        "ecef_to_ntn": convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH),
-        "ecef_to_teme": convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="teme", time=TIME),
-        "ecef_to_j2000": convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="j2000", time=TIME),
-        "ntn_to_ecef": convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="ecef", time=TIME, epoch_time=NTN_EPOCH),
-        "ntn_to_teme": convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="teme", time=TIME, epoch_time=NTN_EPOCH),
-        "ntn_to_j2000": convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="j2000", time=TIME, epoch_time=NTN_EPOCH),
-        "teme_to_ecef": convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ecef", time=TIME),
-        "teme_to_ntn": convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH),
-        "teme_to_j2000": convert_state(position_m, velocity_mps, from_frame="teme", to_frame="j2000", time=TIME),
-        "j2000_to_ecef": convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ecef", time=TIME),
-        "j2000_to_ntn": convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH),
-        "j2000_to_teme": convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="teme", time=TIME),
+        "ecef_to_ntn": convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "ecef_to_teme": convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="teme", time=TIME, time_system="utc"),
+        "ecef_to_j2000": convert_state(position_m, velocity_mps, from_frame="ecef", to_frame="j2000", time=TIME, time_system="utc"),
+        "ntn_to_ecef": convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="ecef", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "ntn_to_teme": convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="teme", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "ntn_to_j2000": convert_state(position_m, velocity_mps, from_frame="ntn-eci", to_frame="j2000", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "teme_to_ecef": convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ecef", time=TIME, time_system="utc"),
+        "teme_to_ntn": convert_state(position_m, velocity_mps, from_frame="teme", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "teme_to_j2000": convert_state(position_m, velocity_mps, from_frame="teme", to_frame="j2000", time=TIME, time_system="utc"),
+        "j2000_to_ecef": convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ecef", time=TIME, time_system="utc"),
+        "j2000_to_ntn": convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "j2000_to_teme": convert_state(position_m, velocity_mps, from_frame="j2000", to_frame="teme", time=TIME, time_system="utc"),
     }
 
 
@@ -186,6 +214,8 @@ def example_ntn_to_teme_elements():
         to_frame="teme",
         time=TIME,
         epoch_time=NTN_EPOCH,
+        time_system="utc",
+        epoch_time_system="utc",
     )
 
 
@@ -214,6 +244,36 @@ def example_gps_time_element_conversion():
         time=GPS_TIME,
         epoch_time=GPS_NTN_EPOCH,
         time_system="gps",
+        epoch_time_system="gps",
+    )
+
+
+def example_bdt_time_element_conversion():
+    """示例：使用 BDT 输入进行开普勒六根数转换。
+
+    参数:
+        无。
+
+    返回:
+        ``KeplerianElements``，表示 ``NTN-ECI`` 下的开普勒六根数。
+    """
+
+    elements = KeplerianElements(
+        a_m=7000e3,
+        eccentricity=0.001,
+        inclination_rad=0.9,
+        raan_rad=0.4,
+        argp_rad=0.2,
+        true_anomaly_rad=1.0,
+    )
+    return convert_elements(
+        elements,
+        from_frame="j2000",
+        to_frame="ntn-eci",
+        time=BDT_TIME,
+        epoch_time=BDT_NTN_EPOCH,
+        time_system="bdt",
+        epoch_time_system="bdt",
     )
 
 
@@ -237,12 +297,12 @@ def example_all_element_conversions():
         true_anomaly_rad=1.0,
     )
     return {
-        "ntn_to_teme": convert_elements(elements, from_frame="ntn-eci", to_frame="teme", time=TIME, epoch_time=NTN_EPOCH),
-        "ntn_to_j2000": convert_elements(elements, from_frame="ntn-eci", to_frame="j2000", time=TIME, epoch_time=NTN_EPOCH),
-        "teme_to_ntn": convert_elements(elements, from_frame="teme", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH),
-        "teme_to_j2000": convert_elements(elements, from_frame="teme", to_frame="j2000", time=TIME),
-        "j2000_to_ntn": convert_elements(elements, from_frame="j2000", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH),
-        "j2000_to_teme": convert_elements(elements, from_frame="j2000", to_frame="teme", time=TIME),
+        "ntn_to_teme": convert_elements(elements, from_frame="ntn-eci", to_frame="teme", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "ntn_to_j2000": convert_elements(elements, from_frame="ntn-eci", to_frame="j2000", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "teme_to_ntn": convert_elements(elements, from_frame="teme", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "teme_to_j2000": convert_elements(elements, from_frame="teme", to_frame="j2000", time=TIME, time_system="utc"),
+        "j2000_to_ntn": convert_elements(elements, from_frame="j2000", to_frame="ntn-eci", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
+        "j2000_to_teme": convert_elements(elements, from_frame="j2000", to_frame="teme", time=TIME, time_system="utc"),
     }
 
 
@@ -307,6 +367,7 @@ def example_add_utc_seconds():
         "plus_1_234_seconds": add_utc_seconds(TIME, 1.234),
         "minus_0_124_seconds": add_utc_seconds(TIME, -0.124),
         "gps_plus_1_234_seconds": add_time_seconds(GPS_TIME, 1.234, system="gps").value,
+        "bdt_minus_0_124_seconds": add_time_seconds(BDT_TIME, -0.124, system="bdt").value,
     }
 
 
@@ -323,6 +384,7 @@ def main():
     print_state("J2000 -> ECEF 状态矢量", example_j2000_to_ecef_state())
     print_state("ECEF -> NTN-ECI 状态矢量", example_ecef_to_ntn_state())
     print_state("GPS time 输入的 J2000 -> NTN-ECI 状态矢量", example_gps_time_state_conversion())
+    print_state("BDT 输入的 J2000 -> NTN-ECI 状态矢量", example_bdt_time_state_conversion())
 
     print("\n全部状态矢量转换")
     for name, state in example_all_state_conversions().items():
@@ -330,6 +392,7 @@ def main():
 
     print_elements("NTN-ECI -> TEME 开普勒六根数", example_ntn_to_teme_elements())
     print_elements("GPS time 输入的 J2000 -> NTN-ECI 开普勒六根数", example_gps_time_element_conversion())
+    print_elements("BDT 输入的 J2000 -> NTN-ECI 开普勒六根数", example_bdt_time_element_conversion())
 
     print("\n全部开普勒六根数转换")
     for name, elements in example_all_element_conversions().items():
