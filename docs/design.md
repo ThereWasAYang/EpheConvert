@@ -83,7 +83,7 @@ convert_state(
 )
 ```
 
-设计上，`convert_state()` 做四件事：
+设计上，`convert_state()` 做五件事：
 
 1. 把输入位置和速度封装成 `StateVector`。
 2. 按 `time_system` 把 `time` 解析为毫秒精度的 Astropy `Time`。
@@ -173,10 +173,10 @@ convert_state(..., time=bdt_time, epoch_time=bdt_epoch, time_system="bdt", epoch
 
 - `a_m`：半长轴，单位 m。
 - `eccentricity`：偏心率。
-- `inclination_rad`：轨道倾角，单位 rad。
-- `raan_rad`：升交点赤经，单位 rad。
 - `argp_rad`：近地点幅角，单位 rad。
-- `true_anomaly_rad`：真近点角，单位 rad。
+- `raan_rad`：升交点赤经，单位 rad。
+- `inclination_rad`：轨道倾角，单位 rad。
+- `mean_anomaly_rad`：平近点角，单位 rad。
 
 当前实现面向椭圆轨道，要求：
 
@@ -219,7 +219,15 @@ convert_elements(
 
 `elements_to_state()` 采用经典两体轨道公式。
 
-先在轨道平面坐标系 `PQW` 中计算：
+先由平近点角 `M` 求解 Kepler 方程，得到偏近点角 `E`，再转换为真近点角
+`nu`：
+
+```text
+M = E - e * sin(E)
+nu = 2 * atan2(sqrt(1 + e) * sin(E / 2), sqrt(1 - e) * cos(E / 2))
+```
+
+然后在轨道平面坐标系 `PQW` 中计算：
 
 ```text
 p = a * (1 - e^2)
@@ -267,13 +275,13 @@ a = -mu / (2 * energy)
 ```
 
 6. 由向量夹角关系计算倾角、RAAN、近地点幅角和真近点角。
-7. 使用 `_angle_0_2pi()` 把角度归一化到 `[0, 2*pi)`。
+7. 将真近点角转换为平近点角，并使用 `_angle_0_2pi()` 把角度归一化到 `[0, 2*pi)`。
 
 代码中对接近圆轨道或赤道轨道的退化情形做了简化处理：
 
 - 节点向量接近 0 时，RAAN 置为 0。
 - 偏心率接近 0 时，近地点幅角置为 0。
-- 圆轨道下使用相应的替代角定义计算真近点角。
+- 圆轨道下使用相应的替代角定义计算真近点角，再转换为平近点角。
 
 这些处理可以保证常见近圆轨道不会直接因为角元素退化而失败，但退化轨道的部分角元素本身没有唯一物理意义，使用时应关注状态矢量是否保持一致。
 
@@ -413,10 +421,14 @@ Astropy 负责：
 代码中设置了：
 
 ```python
-iers.conf.auto_download = False
+iers.conf.auto_download = True
+iers.conf.auto_max_age = None
 ```
 
-这会阻止运行时自动联网下载 IERS 数据，优先使用随安装包提供的数据。这样在网络受限环境中也能运行。测试中可能仍会看到 Astropy 缓存目录权限警告，但不影响当前功能。
+这会允许 Astropy 在网络可用时自动获取较新的 IERS 数据；同时 `auto_max_age = None`
+可以避免在离线环境或本地缓存较旧时因预测数据年龄限制直接抛错。工程本身不内置
+每日更新的 IERS 表，部署环境应定期更新 `astropy-iers-data`，或允许 Astropy 访问
+IERS 数据源以获得最新数据。
 
 ### NumPy
 

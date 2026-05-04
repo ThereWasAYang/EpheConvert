@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "astropy>=6",
+    "astropy-iers-data",
     "numpy>=1.26",
 ]
 

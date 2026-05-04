@@ -207,10 +207,10 @@ def example_ntn_to_teme_elements():
     elements = KeplerianElements(
         a_m=7000e3,
         eccentricity=0.001,
-        inclination_rad=0.9,
-        raan_rad=0.4,
         argp_rad=0.2,
-        true_anomaly_rad=1.0,
+        raan_rad=0.4,
+        inclination_rad=0.9,
+        mean_anomaly_rad=1.0,
     )
     return convert_elements(
         elements,
@@ -236,10 +236,10 @@ def example_gps_time_element_conversion():
     elements = KeplerianElements(
         a_m=7000e3,
         eccentricity=0.001,
-        inclination_rad=0.9,
-        raan_rad=0.4,
         argp_rad=0.2,
-        true_anomaly_rad=1.0,
+        raan_rad=0.4,
+        inclination_rad=0.9,
+        mean_anomaly_rad=1.0,
     )
     return convert_elements(
         elements,
@@ -265,10 +265,10 @@ def example_bdt_time_element_conversion():
     elements = KeplerianElements(
         a_m=7000e3,
         eccentricity=0.001,
-        inclination_rad=0.9,
-        raan_rad=0.4,
         argp_rad=0.2,
-        true_anomaly_rad=1.0,
+        raan_rad=0.4,
+        inclination_rad=0.9,
+        mean_anomaly_rad=1.0,
     )
     return convert_elements(
         elements,
@@ -295,10 +295,10 @@ def example_all_element_conversions():
     elements = KeplerianElements(
         a_m=7000e3,
         eccentricity=0.001,
-        inclination_rad=0.9,
-        raan_rad=0.4,
         argp_rad=0.2,
-        true_anomaly_rad=1.0,
+        raan_rad=0.4,
+        inclination_rad=0.9,
+        mean_anomaly_rad=1.0,
     )
     return {
         "ntn_to_teme": convert_elements(elements, from_frame="ntn-eci", to_frame="teme", time=TIME, epoch_time=NTN_EPOCH, time_system="utc", epoch_time_system="utc"),
@@ -324,10 +324,10 @@ def example_elements_state_round_trip():
     elements = KeplerianElements(
         a_m=7200e3,
         eccentricity=0.01,
-        inclination_rad=0.7,
-        raan_rad=1.2,
         argp_rad=0.4,
-        true_anomaly_rad=2.0,
+        raan_rad=1.2,
+        inclination_rad=0.7,
+        mean_anomaly_rad=2.0,
     )
     state = elements_to_state(elements)
     restored_elements = state_to_elements(state.position_m, state.velocity_mps)

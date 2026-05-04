@@ -20,10 +20,10 @@ class KeplerianElements:
     参数:
         a_m: 半长轴，单位为 m；当前实现面向椭圆轨道，应为正数。
         eccentricity: 偏心率；当前实现要求 ``0 <= eccentricity < 1``。
-        inclination_rad: 轨道倾角，单位为 rad。
-        raan_rad: 升交点赤经 RAAN，单位为 rad。
         argp_rad: 近地点幅角 argument of perigee，单位为 rad。
-        true_anomaly_rad: 真近点角，单位为 rad。
+        raan_rad: 升交点赤经 RAAN，单位为 rad。
+        inclination_rad: 轨道倾角，单位为 rad。
+        mean_anomaly_rad: 平近点角，单位为 rad。
 
     返回:
         不直接返回值；该类实例表示一组开普勒六根数。
@@ -31,10 +31,10 @@ class KeplerianElements:
 
     a_m: float
     eccentricity: float
-    inclination_rad: float
-    raan_rad: float
     argp_rad: float
-    true_anomaly_rad: float
+    raan_rad: float
+    inclination_rad: float
+    mean_anomaly_rad: float
 
 
 def convert_elements(
@@ -104,13 +104,14 @@ def elements_to_state(elements: KeplerianElements, *, mu_m3_s2: float = EARTH_MU
     inc = float(elements.inclination_rad)
     raan = float(elements.raan_rad)
     argp = float(elements.argp_rad)
-    nu = float(elements.true_anomaly_rad)
+    mean_anomaly = float(elements.mean_anomaly_rad)
 
     if a <= 0:
         raise ValueError("a_m must be positive for elliptic orbits")
     if not 0 <= e < 1:
         raise ValueError("eccentricity must satisfy 0 <= e < 1")
 
+    nu = _mean_to_true_anomaly(mean_anomaly, e)
     p = a * (1 - e * e)
     radius = p / (1 + e * np.cos(nu))
     r_pqw = np.array([radius * np.cos(nu), radius * np.sin(nu), 0.0])
@@ -178,7 +179,8 @@ def state_to_elements(
     else:
         nu = _angle_0_2pi(np.arctan2(r_vec[1], r_vec[0]))
 
-    return KeplerianElements(a, e, inc, raan, argp, nu)
+    mean_anomaly = _true_to_mean_anomaly(nu, e)
+    return KeplerianElements(a, e, argp, raan, inc, mean_anomaly)
 
 
 def _rotation_x(angle: float) -> np.ndarray:
@@ -194,6 +196,70 @@ def _rotation_x(angle: float) -> np.ndarray:
     c = np.cos(angle)
     s = np.sin(angle)
     return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
+
+
+def _mean_to_true_anomaly(mean_anomaly: float, eccentricity: float) -> float:
+    """把平近点角转换为真近点角。
+
+    参数:
+        mean_anomaly: 平近点角，单位为 rad。
+        eccentricity: 偏心率，当前实现要求 ``0 <= eccentricity < 1``。
+
+    返回:
+        真近点角，单位为 rad，范围为 ``[0, 2*pi)``。
+    """
+
+    mean = _angle_0_2pi(mean_anomaly)
+    if eccentricity < _TOL:
+        return mean
+    eccentric_anomaly = _solve_kepler_equation(mean, eccentricity)
+    sin_half = np.sqrt(1 + eccentricity) * np.sin(eccentric_anomaly / 2)
+    cos_half = np.sqrt(1 - eccentricity) * np.cos(eccentric_anomaly / 2)
+    return _angle_0_2pi(2 * np.arctan2(sin_half, cos_half))
+
+
+def _true_to_mean_anomaly(true_anomaly: float, eccentricity: float) -> float:
+    """把真近点角转换为平近点角。
+
+    参数:
+        true_anomaly: 真近点角，单位为 rad。
+        eccentricity: 偏心率，当前实现要求 ``0 <= eccentricity < 1``。
+
+    返回:
+        平近点角，单位为 rad，范围为 ``[0, 2*pi)``。
+    """
+
+    true_anomaly = _angle_0_2pi(true_anomaly)
+    if eccentricity < _TOL:
+        return true_anomaly
+    eccentric_anomaly = 2 * np.arctan2(
+        np.sqrt(1 - eccentricity) * np.sin(true_anomaly / 2),
+        np.sqrt(1 + eccentricity) * np.cos(true_anomaly / 2),
+    )
+    mean_anomaly = eccentric_anomaly - eccentricity * np.sin(eccentric_anomaly)
+    return _angle_0_2pi(mean_anomaly)
+
+
+def _solve_kepler_equation(mean_anomaly: float, eccentricity: float) -> float:
+    """求解椭圆轨道 Kepler 方程 ``M = E - e*sin(E)``。
+
+    参数:
+        mean_anomaly: 平近点角，单位为 rad。
+        eccentricity: 偏心率。
+
+    返回:
+        偏近点角，单位为 rad。
+    """
+
+    eccentric_anomaly = mean_anomaly if eccentricity < 0.8 else np.pi
+    for _ in range(50):
+        residual = eccentric_anomaly - eccentricity * np.sin(eccentric_anomaly) - mean_anomaly
+        derivative = 1 - eccentricity * np.cos(eccentric_anomaly)
+        step = residual / derivative
+        eccentric_anomaly -= step
+        if abs(step) < 1e-14:
+            break
+    return eccentric_anomaly
 
 
 def _rotation_z(angle: float) -> np.ndarray:

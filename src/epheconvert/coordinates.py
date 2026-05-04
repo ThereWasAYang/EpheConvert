@@ -26,7 +26,8 @@ from astropy.utils import iers
 
 from .time import TimeSystem, _to_astropy_time
 
-iers.conf.auto_download = False
+iers.conf.auto_download = True
+iers.conf.auto_max_age = None
 
 FrameName = Literal["ecef", "ntn-eci", "teme", "j2000"]
 

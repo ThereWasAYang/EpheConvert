@@ -19,6 +19,10 @@ GPS 连续秒解释。如果输入是 `BDT`（北斗时间），可以传入 `ti
 此时数值时间按北斗连续秒解释。工程中的时间统一使用毫秒精度；输入若包含更细
 的小数秒，会四舍五入到 0.001 s，UTC 字符串输出固定保留 3 位毫秒。
 
+本工程依赖 Astropy 的 IERS 数据完成高精度地固/天球参考系转换。代码允许
+Astropy 在网络可用时自动下载最新 IERS 数据；如果部署环境不能联网，应定期更新
+`astropy-iers-data` 包，避免使用过旧的地球定向参数。
+
 ## 使用示例
 
 README 中的示例已经整理到 [examples/readme_examples.py](examples/readme_examples.py)。
@@ -143,6 +147,8 @@ j2000_to_teme = convert_state(position_m, velocity_mps, from_frame="j2000", to_f
 
 `NTN-ECI`、`TEME`、`J2000` 三种惯性参考系之间支持任意两两转换。角度单位
 均为 rad，半长轴单位为 m。返回值是目标参考系下的 `KeplerianElements`。
+本工程统一使用的六根数顺序为：半长轴、偏心率、近地点幅角、升交点赤经、
+轨道倾角、平近点角。
 
 ```python
 from epheconvert import KeplerianElements, convert_elements
@@ -150,10 +156,10 @@ from epheconvert import KeplerianElements, convert_elements
 elements = KeplerianElements(
     a_m=7000e3,
     eccentricity=0.001,
-    inclination_rad=0.9,
-    raan_rad=0.4,
     argp_rad=0.2,
-    true_anomaly_rad=1.0,
+    raan_rad=0.4,
+    inclination_rad=0.9,
+    mean_anomaly_rad=1.0,
 )
 
 teme_elements = convert_elements(
@@ -177,10 +183,10 @@ from epheconvert import KeplerianElements, convert_elements
 elements = KeplerianElements(
     a_m=7000e3,
     eccentricity=0.001,
-    inclination_rad=0.9,
-    raan_rad=0.4,
     argp_rad=0.2,
-    true_anomaly_rad=1.0,
+    raan_rad=0.4,
+    inclination_rad=0.9,
+    mean_anomaly_rad=1.0,
 )
 
 time = "2026-05-03T00:00:00.123"
@@ -204,10 +210,10 @@ from epheconvert import KeplerianElements, convert_elements, convert_time
 elements = KeplerianElements(
     a_m=7000e3,
     eccentricity=0.001,
-    inclination_rad=0.9,
-    raan_rad=0.4,
     argp_rad=0.2,
-    true_anomaly_rad=1.0,
+    raan_rad=0.4,
+    inclination_rad=0.9,
+    mean_anomaly_rad=1.0,
 )
 
 gps_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="gps").value
@@ -232,10 +238,10 @@ from epheconvert import KeplerianElements, convert_elements, convert_time
 elements = KeplerianElements(
     a_m=7000e3,
     eccentricity=0.001,
-    inclination_rad=0.9,
-    raan_rad=0.4,
     argp_rad=0.2,
-    true_anomaly_rad=1.0,
+    raan_rad=0.4,
+    inclination_rad=0.9,
+    mean_anomaly_rad=1.0,
 )
 
 bdt_time = convert_time("2026-05-03T00:00:00.123", from_system="utc", to_system="bdt").value
@@ -260,10 +266,10 @@ from epheconvert import KeplerianElements, elements_to_state, state_to_elements
 elements = KeplerianElements(
     a_m=7200e3,
     eccentricity=0.01,
-    inclination_rad=0.7,
-    raan_rad=1.2,
     argp_rad=0.4,
-    true_anomaly_rad=2.0,
+    raan_rad=1.2,
+    inclination_rad=0.7,
+    mean_anomaly_rad=2.0,
 )
 
 state = elements_to_state(elements)

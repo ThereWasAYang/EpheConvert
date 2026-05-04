@@ -127,10 +127,10 @@ def test_elements_round_trip_state():
     elements = KeplerianElements(
         a_m=7200000.0,
         eccentricity=0.01,
-        inclination_rad=0.7,
-        raan_rad=1.2,
         argp_rad=0.4,
-        true_anomaly_rad=2.0,
+        raan_rad=1.2,
+        inclination_rad=0.7,
+        mean_anomaly_rad=2.0,
     )
 
     state = elements_to_state(elements)
@@ -141,14 +141,25 @@ def test_elements_round_trip_state():
     assert np.allclose(restored_state.velocity_mps, state.velocity_mps, atol=1e-9)
 
 
+def test_keplerian_elements_positional_order():
+    elements = KeplerianElements(7200000.0, 0.01, 0.4, 1.2, 0.7, 2.0)
+
+    assert elements.a_m == 7200000.0
+    assert elements.eccentricity == 0.01
+    assert elements.argp_rad == 0.4
+    assert elements.raan_rad == 1.2
+    assert elements.inclination_rad == 0.7
+    assert elements.mean_anomaly_rad == 2.0
+
+
 def test_convert_elements_between_inertial_frames_preserves_cartesian_state():
     elements = KeplerianElements(
         a_m=7200000.0,
         eccentricity=0.02,
-        inclination_rad=0.8,
-        raan_rad=0.6,
         argp_rad=0.3,
-        true_anomaly_rad=1.7,
+        raan_rad=0.6,
+        inclination_rad=0.8,
+        mean_anomaly_rad=1.7,
     )
 
     converted = convert_elements(
@@ -181,10 +192,10 @@ def test_element_conversion_accepts_gps_time():
     elements = KeplerianElements(
         a_m=7200000.0,
         eccentricity=0.02,
-        inclination_rad=0.8,
-        raan_rad=0.6,
         argp_rad=0.3,
-        true_anomaly_rad=1.7,
+        raan_rad=0.6,
+        inclination_rad=0.8,
+        mean_anomaly_rad=1.7,
     )
 
     from_utc = convert_elements(
